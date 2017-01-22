@@ -2,6 +2,8 @@
 #include <array>
 #include <ctime>
 #include <iostream>
+#include <map>
+#include <memory>
 #include <random>
 
 // ------------------------------------------------------------------------------------------------------------------
@@ -106,8 +108,8 @@ public:
     constexpr variate_iterator() noexcept = default;
 
     variate_iterator(URBG& u, Dist& d)
-        : u{ &u }
-        , d{ &d }
+            : u{ &u }
+            , d{ &d }
     {
     }
 
@@ -373,6 +375,7 @@ struct algorithm_selector {
         std::cout << "Standard implementation of algorithm\n";
     }
 };
+
 template <>
 struct algorithm_selector<true> {
     template <typename T>
@@ -386,6 +389,8 @@ struct algorithm_selector<true> {
     }
 };
 
+
+void show_off_variadic_templates();
 
 // a generic function that the end user of the algorithm will call
 // note that it in turn calls algorithm_selector, parameterised using the supports_optimised_implementation traits class:
@@ -412,8 +417,58 @@ void show_off_traits()
 
 
 // ------------------------------------------------------------------------------------------------------------------
+
+// uniform initialization
+void show_off_uniform_initialization()
+{
+
+    std::vector<std::string> strvec1 = { "string1", "string2" };
+
+    // this does NOT give the same result-> strvec2 will be deduced to be of type std::initializer_list<char const*>
+    auto strvec2 = { "string1", "string2" };
+
+    std::map<int, std::string> map1 = { { 1, "One" }, { 2, "Two" } };
+
+    return;
+}
+
 // ------------------------------------------------------------------------------------------------------------------
 
+
+void show_off_move_and_forward()
+{
+
+    return;
+}
+
+
+// ------------------------------------------------------------------------------------------------------------------
+
+
+template <typename T>
+void VariadicTemplateFunction(T t)
+{
+    std::cout << t << '\n';
+}
+
+template <typename T, typename... Data>
+void VariadicTemplateFunction(T t, Data... d)
+{
+
+    std::cout << "# of params remaining: " << sizeof...(d) << " - current value: " << t << '\n';
+    VariadicTemplateFunction(d...);
+}
+
+void show_off_variadic_templates()
+{
+
+    VariadicTemplateFunction(1, 2, 3, 4, 5, 6, 7, 8);
+
+    return;
+}
+
+
+// ------------------------------------------------------------------------------------------------------------------
 
 int main()
 {
@@ -438,6 +493,15 @@ int main()
 
 
     show_off_traits();
+
+
+    show_off_uniform_initialization();
+
+
+    show_off_move_and_forward();
+
+
+    show_off_variadic_templates();
 
     return 0;
 }

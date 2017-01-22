@@ -2,7 +2,7 @@ cmake_minimum_required(VERSION 3.6)
 
 
 
-set(CMAKE_CXX_FLAGS "--std=gnu++1y ${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "--std=gnu++1z ${CMAKE_CXX_FLAGS}")
 
 # Download and unpack googletest at configure time
 configure_file(CMakeLists.txt.in
