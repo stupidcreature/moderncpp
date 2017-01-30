@@ -12,6 +12,10 @@ public:
         return a+b;
     }
 
+private:
+public:
+    int64_t some_internal_state_ = 0;
+
 };
 
 
