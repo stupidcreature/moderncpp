@@ -5,6 +5,24 @@
 #include <map>
 #include <memory>
 #include <random>
+#include <zconf.h>
+#include <future>
+
+
+// ------------------------------------------------------------------------------------------------------------------
+// for benchmarking
+// check: https://www.youtube.com/watch?v=nXaxk27zwlk (minute 42)
+
+//prevents the compiler from optimizing away the variable pointed to by b
+static void escape(void*p) {
+    asm volatile("" : : "g"(p) : "memory");
+}
+
+// tells the compiler that the assembly might read/write all data
+// prevents the compiler from optimizing away unused variables
+static void clobber() {
+    asm volatile("" : : : "memory");
+}
 
 
 // ------------------------------------------------------------------------------------------------------------------
@@ -391,7 +409,7 @@ struct algorithm_selector<true> {
 };
 
 
-void show_off_variadic_templates();
+void show_off_threading_with_futures();
 
 // a generic function that the end user of the algorithm will call
 // note that it in turn calls algorithm_selector, parameterised using the supports_optimised_implementation traits class:
@@ -460,12 +478,47 @@ void VariadicTemplateFunction(T t, Data... d)
     VariadicTemplateFunction(d...);
 }
 
+
+// second way: check https://www.youtube.com/watch?v=CU3VYN6xGzM&index=10&list=PLs3KjaCtOwSZ2tbuV1hx8Xz-rFZTan2J1
+template <typename T>
+void my_println_impl(const T& param)
+{
+    std::cout << param << '\n';
+}
+
+template <typename ... T>
+void VariadicTemplateFunctionWithInitializerListTrick(const T& ... param) {
+
+    (void)std::initializer_list<int>{ (my_println_impl(param), 0)... };
+}
+
 void show_off_variadic_templates()
 {
-
     VariadicTemplateFunction(1, 2, 3, 4, 5, 6, 7, 8);
 
-    return;
+    VariadicTemplateFunctionWithInitializerListTrick("Hello", "World", 1, 2, 3, 4.2);
+}
+
+
+// ------------------------------------------------------------------------------------------------------------------
+// check out this primer: https://www.youtube.com/watch?v=iCL6GYoi1RU&index=9&list=PLs3KjaCtOwSZ2tbuV1hx8Xz-rFZTan2J1
+int slow_compute_function(const useconds_t sleep_time, const int dummy_retval_in) {
+    for (int i = 0; i < 1000; ++i) {
+        usleep(sleep_time);
+    }
+    return dummy_retval_in;
+}
+
+
+void show_off_threading_with_futures() {
+    // to really have the threads run asynchronously, pass std::launch::async as first parameter
+    // with std::launch::deferred (default?!) they will be queued
+    auto f1 = std::async(std::launch::async, slow_compute_function, 1000, 1);
+    auto f2 = std::async(std::launch::async, slow_compute_function, 1000, 2);
+    auto f3 = std::async(std::launch::async, slow_compute_function, 1000, 3);
+    auto f4 = std::async(std::launch::async, slow_compute_function, 1000, 4);
+
+    std::cout << f1.get() + f2.get() + f3.get() + f4.get() << '\n';
 }
 
 
@@ -501,8 +554,10 @@ int main()
 
     show_off_move_and_forward();
 
-
     show_off_variadic_templates();
+
+    show_off_threading_with_futures();
 
     return 0;
 }
+
