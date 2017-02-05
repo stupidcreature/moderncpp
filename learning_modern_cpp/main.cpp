@@ -436,8 +436,27 @@ void show_off_traits()
 
 
 // ------------------------------------------------------------------------------------------------------------------
-
 // uniform initialization
+
+struct Exchange {
+    int count;
+    double rates[2];
+
+    Exchange(const std::initializer_list<double> il) {
+        if( il.size() < 2 ) return;
+        if( il.size() == 3 ) {
+            auto it = il.begin();
+            count = static_cast<int>(*it++);
+            rates[0] = *it++;
+            rates[1] = *it;
+        }
+
+//        if( il.size() > 3 ) {
+//            throw std::runtime_error(std::string("Error: too many elements in initializer list"));
+//        }
+    }
+};
+
 void show_off_uniform_initialization()
 {
 
@@ -447,6 +466,9 @@ void show_off_uniform_initialization()
     auto strvec2 = { "string1", "string2" };
 
     std::map<int, std::string> map1 = { { 1, "One" }, { 2, "Two" } };
+
+
+    Exchange exchange{42,1.2,2.3};
 
     return;
 }
