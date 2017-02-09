@@ -48,3 +48,4 @@ endif()
 
 add_subdirectory(learning_modern_cpp)
 add_subdirectory(learning_gtest)
+add_subdirectory(statistics_storage)
