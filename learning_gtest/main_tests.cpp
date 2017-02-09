@@ -1,5 +1,5 @@
 #include "gtest/gtest.h"
-#include "../learning_modern_cpp/SomeClassToTest.h"
+#include "SomeClassToTest.h"
 
 
 TEST(DummyTest, AlwaysPasses) {

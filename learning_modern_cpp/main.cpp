@@ -429,9 +429,9 @@ struct Exchange {
             rates[1] = *it;
         }
 
-//        if( il.size() > 3 ) {
-//            throw std::runtime_error(std::string("Error: too many elements in initializer list"));
-//        }
+        if( il.size() > 3 ) {
+            throw std::runtime_error(std::string("Error: too many elements in initializer list"));
+        }
     }
 };
 
@@ -446,7 +446,9 @@ void show_off_uniform_initialization() {
                                        {2, "Two"}};
 
 
-    Exchange exchange{42, 1.2, 2.3};
+    Exchange exchange{42, 1.2, 2.3,3};
+
+
 
 }
 

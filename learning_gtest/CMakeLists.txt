@@ -40,7 +40,7 @@ project(ModernCpp)
 
 set(CMAKE_CXX_STANDARD 14)
 
-set(SOURCE_FILES_TEST main_tests.cpp ../learning_modern_cpp/SomeClassToTest.cpp)
+set(SOURCE_FILES_TEST main_tests.cpp SomeClassToTest.cpp)
 
 include_directories(${CMAKE_BINARY_DIR}/googletest-src/googletest/include)
 
