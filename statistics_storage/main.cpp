@@ -32,9 +32,25 @@ AM_MEASURED_DATA m_MD;
 
 int main() {
 
+    // prepare mock data
+    for (int i = 0; i < cMAX_DISKS; ++i) {
+        m_MD.DiskData.HDD_Temps[i].ModelKey = L"KEY_";
+        m_MD.DiskData.HDD_Temps[i].ModelKey.append(std::to_wstring(i));
+        m_MD.DiskData.HDD_Temps[i].ModelStr = L"MODELSTRING";
+        m_MD.DiskData.HDD_Temps[i].Temperature = 20+i*2;
+    }
 
-    CStatisticsStorage new_stat(5000, cMAX_DISKS, 1, 5);
+
+    CStatisticsStorage new_stat(5, cMAX_DISKS, 5, 3);
     std::vector<double> values = {1,2,3,5,4};
+    new_stat.AddValues(values);
+    new_stat.AddValues(values);
+    new_stat.AddValues(values);
+    new_stat.AddValues(values);
+    new_stat.AddValues(values);
+    new_stat.AddValues(values);
+    new_stat.AddValues(values);
+    new_stat.AddValues(values);
     new_stat.AddValues(values);
 
 
@@ -43,13 +59,6 @@ int main() {
     old_stat.SetFilterLength(5);
 
 
-    // prepare mock data
-    for (int i = 0; i < cMAX_DISKS; ++i) {
-        m_MD.DiskData.HDD_Temps[i].ModelKey = L"KEY_";
-        m_MD.DiskData.HDD_Temps[i].ModelKey.append(std::to_wstring(i));
-        m_MD.DiskData.HDD_Temps[i].ModelStr = L"MODELSTRING";
-        m_MD.DiskData.HDD_Temps[i].Temperature = 20+i*2;
-    }
 
     for (int i = 0; i < 10000; ++i) {
 

@@ -2,93 +2,186 @@
 #define STATISTICSSTORAGE_H
 
 #include <chrono>
-#include <vector>
 #include <stdexcept>
+#include <vector>
 
 class CStatisticsStorage {
 
     typedef struct {
-        double value;
+        double                                value;
         std::chrono::system_clock::time_point timestamp;
     } DATA_VALUE_T;
 
 public:
     CStatisticsStorage(size_t max_values_per_graph, size_t max_graphs,
                        size_t current_graphs, size_t filter_length)
-            : m_current_values(0), m_max_values(max_values_per_graph),
-              m_max_graphs(max_graphs), m_start(0), m_current(0),
-              m_current_graphs(current_graphs), m_filter_length(filter_length) {
+        : m_current_value_count(0)
+        , m_max_values(max_values_per_graph)
+        , m_max_graphs(max_graphs)
+        , m_current(0)
+        , m_current_graph_count(current_graphs)
+        , m_filter_length(filter_length)
+        , m_ActiveCounter(0)
+        , m_bActive(true)
+        , m_bSkipZeroValuesForFiltering(false)
+    {
 
         m_data_raw.reserve(max_graphs);
         m_data_filtered.reserve(max_graphs);
 
         DATA_VALUE_T val;
-        val.value = 0;
+        val.value     = 0;
         val.timestamp = Now();
 
 
         std::vector<DATA_VALUE_T> vval;
+        vval.reserve(m_max_values);
         for (int j = 0; j < m_max_values; ++j) {
             vval.push_back(val);
         }
 
         for (int i = 0; i < max_graphs; ++i) {
-            m_data_raw[i].reserve(max_values_per_graph);
-            m_data_filtered[i].reserve(max_values_per_graph);
-
             m_data_raw.push_back(vval);
             m_data_filtered.push_back(vval);
         }
-
     }
 
     virtual ~CStatisticsStorage() {}
 
-    size_t GetSize() const { return m_current_values; }
+    size_t GetSize() const { return m_current_value_count; }
 
     size_t GetMaxValues() const { return m_max_values; }
 
     size_t GetMaxGraphs() const { return m_max_graphs; }
 
-    // adds a vector of values and applies the timestamp 'Now()'
-    size_t AddValues(std::vector<double> values) {
-        if (m_current_graphs != values.size()) {
-            // how to react to a wrong number of elements passed to the
-            // function?
-            throw (std::runtime_error("AddValues: wrong number of values"));
+    void AddCurrentRawValuesAsFilteredValues()
+    {
+        for (size_t i = 0; i < m_current_graph_count; i++) {
+            m_data_filtered[i][m_current] = m_data_raw[i][m_current];
+        }
+    }
+
+    void PerformFiltering()
+    {
+        if (m_current_value_count < 1)
+            return;
+
+        if (!m_filter_length) {
+            AddCurrentRawValuesAsFilteredValues();
+            return;
         }
 
-        // if buffer is not filled completely, just add a new value
-        if (m_current_values < m_max_values) {
-            DATA_VALUE_T val;
-            val.timestamp = Now();
-            for (int i = 0; i < m_current_graphs; ++i) {
-                val.value = values[i];
-                m_data_raw[i].push_back(val);
+        // bei deaktivierter GPU moeglichst steile 'Aus-Flanke'
+        // -> keine Filterung
+        if (!m_bActive) {
+            AddCurrentRawValuesAsFilteredValues();
+            return;
+        } else {
+            m_ActiveCounter++;
+        }
+
+        int fcount = (m_current_value_count < m_filter_length) ? m_current_value_count : m_filter_length;
+
+        // bei gerade aktivierter GPU moeglichst steile 'An-Flanke'
+        // -> Filterung nicht fuer m_nFilterLength sondern nur fuer die Anzahl der Werte nach der Aktivierung durchfuehren
+        // m_bSkipZeroValuesForFiltering muss dafuer true sein
+        if (m_ActiveCounter < fcount)
+            fcount = m_ActiveCounter;
+        if (fcount <= 0) {
+            for (size_t i = 0; i < m_current_graph_count; i++) {
+                m_data_filtered[i][m_current] = m_data_raw[i][m_current];
             }
+            return;
         }
-            // buffer is already full -> overwrite oldest value
-        else {
+
+        for (size_t i = 0; i < m_current_graph_count; i++) {
+            double fval        = 0;
+            size_t sumCount    = 0;
+            size_t filterIndex = m_current;
+
+            DATA_VALUE_T val = m_data_raw[i][m_current];
+
+            for (size_t j = 0; j < fcount; j++) {
+                if (!m_bSkipZeroValuesForFiltering) {
+                    fval += m_data_raw[i][filterIndex].value;
+                    sumCount++;
+                } else {
+                    if (m_data_raw[i][filterIndex].value > 0) {
+                        fval += m_data_raw[i][filterIndex].value;
+                        sumCount++;
+                    }
+                }
+                if (filterIndex > 0) {
+                    --filterIndex;
+                } else {
+                    filterIndex = m_max_values - 1;
+                }
+            }
+            if (sumCount > 0)
+                fval /= sumCount;
+            val.value                     = fval;
+            m_data_filtered[i][m_current] = val;
         }
+    }
+
+
+    void SetActive(bool active)
+    {
+        m_bActive = active;
+        if (active)
+            m_ActiveCounter = 0;
+    }
+
+    void SetSkipZeroValuesForFiltering(bool val = true) { m_bSkipZeroValuesForFiltering = val; }
+
+
+    // adds a vector of values and applies the timestamp 'Now()'
+    size_t AddValues(std::vector<double> values)
+    {
+        if (m_current_graph_count != values.size()) {
+            // how to react to a wrong number of elements passed to the
+            // function?
+            throw(std::runtime_error("AddValues: wrong number of values"));
+        }
+
+        if (m_current_value_count) {
+            m_current = (m_current + 1) % m_max_values;
+        }
+
+        DATA_VALUE_T val;
+        val.timestamp = Now();
+        for (int i = 0; i < m_current_graph_count; ++i) {
+            val.value                = values[i];
+            m_data_raw[i][m_current] = val;
+        }
+
+        if (m_current_value_count < m_max_values) {
+            ++m_current_value_count;
+        }
+
+        PerformFiltering();
     }
 
 private:
     CStatisticsStorage() {}
 
-    static std::chrono::system_clock::time_point Now() {
+    static std::chrono::system_clock::time_point Now()
+    {
         return std::chrono::system_clock::now();
     }
 
-    std::vector<std::vector<DATA_VALUE_T>> m_data_raw;
-    std::vector<std::vector<DATA_VALUE_T>> m_data_filtered;
+    std::vector<std::vector<DATA_VALUE_T> > m_data_raw;
+    std::vector<std::vector<DATA_VALUE_T> > m_data_filtered;
 
-    size_t m_start;          // pointer to first element
-    size_t m_current;        // pointer to current (most recently added) element
-    size_t m_current_graphs; // number of 'parallel' graphs
-    size_t m_current_values; // number of current values in statistic
-    size_t m_max_values;     // maximum number of values (reserved)
-    size_t m_max_graphs;     // maximum number of 'parallel' graphs (reserved)
-    size_t m_filter_length;  // filter length (if 0 -> filtering is disabled
+    size_t m_current;             // pointer to current (most recently added) element
+    size_t m_current_graph_count; // number of 'parallel' graphs
+    size_t m_current_value_count; // number of current values in statistic
+    size_t m_max_values;          // maximum number of values (reserved)
+    size_t m_max_graphs;          // maximum number of 'parallel' graphs (reserved)
+    size_t m_filter_length;       // filter length (if 0 -> filtering is disabled
+    bool   m_bActive;
+    int    m_ActiveCounter;
+    bool   m_bSkipZeroValuesForFiltering;
 };
 
 #endif // STATISTICSSTORAGE_H

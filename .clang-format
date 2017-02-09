@@ -1,6 +1,7 @@
 ---
 # We'll use defaults from the LLVM style, but with 4 columns indentation.
-BasedOnStyle: LLVM
+#BasedOnStyle: LLVM
+BasedOnStyle: Webkit
 IndentWidth: 4
 ---
 Language: Cpp
@@ -9,6 +10,8 @@ DerivePointerAlignment: false
 PointerAlignment: Left
 AlignConsecutiveAssignments: true
 AlignConsecutiveDeclarations: true
+AlignTrailingComments: true
 AlignOperands: true
-
+AlignAfterOpenBracket: Align
+MaxEmptyLinesToKeep: 2
 

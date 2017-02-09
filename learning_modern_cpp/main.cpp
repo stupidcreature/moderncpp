@@ -446,7 +446,7 @@ void show_off_uniform_initialization() {
                                        {2, "Two"}};
 
 
-    Exchange exchange{42, 1.2, 2.3,3};
+    Exchange exchange{42, 1.2, 2.3, 3};
 
 
 
