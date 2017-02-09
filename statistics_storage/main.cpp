@@ -33,11 +33,14 @@ AM_MEASURED_DATA m_MD;
 int main() {
 
 
-    CStatisticsStorage newstat(5000, cMAX_DISKS);
+    CStatisticsStorage new_stat(5000, cMAX_DISKS, 1, 5);
+    std::vector<double> values = {1,2,3,5,4};
+    new_stat.AddValues(values);
 
-    CTempStatistics oldstat;
-    oldstat.SetStatSize(200);
-    oldstat.SetFilterLength(5);
+
+    CTempStatistics old_stat;
+    old_stat.SetStatSize(200);
+    old_stat.SetFilterLength(5);
 
 
     // prepare mock data
@@ -50,7 +53,7 @@ int main() {
 
     for (int i = 0; i < 10000; ++i) {
 
-        oldstat.AddValueAndKey(m_MD.DiskData.HDD_Temps[0].Temperature, m_MD.DiskData.HDD_Temps[0].ModelKey,
+        old_stat.AddValueAndKey(m_MD.DiskData.HDD_Temps[0].Temperature, m_MD.DiskData.HDD_Temps[0].ModelKey,
                                m_MD.DiskData.HDD_Temps[0].ModelStr,
                                m_MD.DiskData.HDD_Temps[1].Temperature, m_MD.DiskData.HDD_Temps[1].ModelKey,
                                m_MD.DiskData.HDD_Temps[1].ModelStr,
@@ -85,7 +88,7 @@ int main() {
         );
     }
 
-    oldstat.DuplicateLastEntries();
+    old_stat.DuplicateLastEntries();
 
 
     return 0;
