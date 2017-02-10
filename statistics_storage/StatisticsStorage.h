@@ -15,6 +15,12 @@ public:
     } DATA_VALUE_T;
 
 
+    /** Constructor to create a StatisticsStorage
+     * @param max_values_per_graph  how many values the statistics can hold
+     * @param max_graphs            how many 'parallel' graphs can exist (for preallocating storage)
+     * @param current_graphs        0 if key/legend scheme will be used, should be equal to max_graphs otherwise
+     * @param filter_length         how many values should be used for filtering
+     */
     CStatisticsStorage(size_t max_values_per_graph, size_t max_graphs,
                        size_t current_graphs, size_t filter_length)
         : m_current_value_count(0)
@@ -156,7 +162,6 @@ public:
                     // no new values for key == i
                     // -> remove values for this key and reorder remaining values, keys and legend text
                     if (-1 == to_remove[i]) {
-
                         RemoveFromStatistics(i);
                         break;
                     }

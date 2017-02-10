@@ -62,11 +62,13 @@ int main() {
     new_stat.AddValuesWithKeys(values, keys, legend);
 
     values.pop_back();
+
     keys.clear();
     keys.push_back(L"Model a");
     keys.push_back(L"Model b");
     keys.push_back(L"Model c");
     keys.push_back(L"Model f");
+
     legend.clear();
     legend.push_back(L"Legend a");
     legend.push_back(L"Legend b");
