@@ -41,25 +41,37 @@ int main() {
     }
 
 
-    CStatisticsStorage new_stat(5, cMAX_DISKS, 5, 3);
+    CStatisticsStorage new_stat(5, cMAX_DISKS, 0, 3);
     std::vector<double> values = {1,2,3,5,4};
 
     std::vector<std::wstring> keys;
-    keys.push_back(L"Model 1");
-    keys.push_back(L"Model 2");
-    keys.push_back(L"Model 3");
-    keys.push_back(L"Model 4");
-    keys.push_back(L"Model 5");
+    keys.push_back(L"Model a");
+    keys.push_back(L"Model c");
+    keys.push_back(L"Model d");
+    keys.push_back(L"Model e");
+    keys.push_back(L"Model f");
 
     std::vector<std::wstring> legend;
-    legend.push_back(L"Legend 1");
-    legend.push_back(L"Legend 2");
-    legend.push_back(L"Legend 3");
-    legend.push_back(L"Legend 4");
-    legend.push_back(L"Legend 5");
+    legend.push_back(L"Legend a");
+    legend.push_back(L"Legend c");
+    legend.push_back(L"Legend d");
+    legend.push_back(L"Legend e");
+    legend.push_back(L"Legend f");
 
 
     new_stat.AddValuesWithKeys(values, keys, legend);
+
+    values.pop_back();
+    keys.clear();
+    keys.push_back(L"Model a");
+    keys.push_back(L"Model b");
+    keys.push_back(L"Model c");
+    keys.push_back(L"Model f");
+    legend.clear();
+    legend.push_back(L"Legend a");
+    legend.push_back(L"Legend b");
+    legend.push_back(L"Legend c");
+    legend.push_back(L"Legend f");
     new_stat.AddValuesWithKeys(values, keys, legend);
 
 //    new_stat.AddValues(values);

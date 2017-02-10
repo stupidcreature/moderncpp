@@ -231,7 +231,7 @@ void CTempStatistics::RemoveFromStatistics(int indextoremove)
         (*it).T[cMAX_GRAPHS - 1] = 0;
         it++;
     }
-    //m_nStatWidth--; // m�sste eigentlich rein. Wie wird die Breite angepasset, wenn Werte verschwinden?
+    //m_nStatWidth--; // muesste eigentlich rein. Wie wird die Breite angepasset, wenn Werte verschwinden?
 }
 //---------------------------------------------------------------------------
 
@@ -246,7 +246,7 @@ void CTempStatistics::FixMapping(const UnicodeString& key1, const UnicodeString&
                                  const UnicodeString& key16)
 {
     //herausfinden, welche keys neu (N) sind und welche nicht mehr dabei sind (R)
-    //fuer alle R -> n�chste Statistikspalte in alte Rte Spalte verschieben
+    //fuer alle R -> naechste Statistikspalte in alte Rte Spalte verschieben
     //
     //fuer alle N->
     //erste freie Spalte finden und als Index fuer diesen Key einfuegen
