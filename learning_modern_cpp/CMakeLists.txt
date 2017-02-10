@@ -3,7 +3,7 @@ cmake_minimum_required(VERSION 3.2)
 project(learning_modern_cpp)
 
 
-set(CMAKE_CXX_FLAGS "-march=native -O3 --std=gnu++1z -pthread ${CMAKE_CXX_FLAGS}")
+set(CMAKE_CXX_FLAGS "-march=native -Wall -Wno-unused-variable -Wno-unused-function -O3 --std=gnu++1z -pthread ${CMAKE_CXX_FLAGS}")
 
 
 set(CMAKE_CXX_STANDARD 14)

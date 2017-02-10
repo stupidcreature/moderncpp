@@ -33,7 +33,7 @@ AM_MEASURED_DATA m_MD;
 int main() {
 
     // prepare mock data
-    for (int i = 0; i < cMAX_DISKS; ++i) {
+    for (size_t i = 0; i < cMAX_DISKS; ++i) {
         m_MD.DiskData.HDD_Temps[i].ModelKey = L"KEY_";
         m_MD.DiskData.HDD_Temps[i].ModelKey.append(std::to_wstring(i));
         m_MD.DiskData.HDD_Temps[i].ModelStr = L"MODELSTRING";
@@ -43,15 +43,34 @@ int main() {
 
     CStatisticsStorage new_stat(5, cMAX_DISKS, 5, 3);
     std::vector<double> values = {1,2,3,5,4};
-    new_stat.AddValues(values);
-    new_stat.AddValues(values);
-    new_stat.AddValues(values);
-    new_stat.AddValues(values);
-    new_stat.AddValues(values);
-    new_stat.AddValues(values);
-    new_stat.AddValues(values);
-    new_stat.AddValues(values);
-    new_stat.AddValues(values);
+
+    std::vector<std::wstring> keys;
+    keys.push_back(L"Model 1");
+    keys.push_back(L"Model 2");
+    keys.push_back(L"Model 3");
+    keys.push_back(L"Model 4");
+    keys.push_back(L"Model 5");
+
+    std::vector<std::wstring> legend;
+    legend.push_back(L"Legend 1");
+    legend.push_back(L"Legend 2");
+    legend.push_back(L"Legend 3");
+    legend.push_back(L"Legend 4");
+    legend.push_back(L"Legend 5");
+
+
+    new_stat.AddValuesWithKeys(values, keys, legend);
+    new_stat.AddValuesWithKeys(values, keys, legend);
+
+//    new_stat.AddValues(values);
+//    new_stat.AddValues(values);
+//    new_stat.AddValues(values);
+//    new_stat.AddValues(values);
+//    new_stat.AddValues(values);
+//    new_stat.AddValues(values);
+//    new_stat.AddValues(values);
+//    new_stat.AddValues(values);
+//    new_stat.AddValues(values);
 
 
     CTempStatistics old_stat;
