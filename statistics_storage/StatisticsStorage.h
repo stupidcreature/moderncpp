@@ -241,6 +241,42 @@ public:
         return m_current_value_count;
     }
 
+    std::vector<std::wstring> GetLegendVector() const
+    {
+        if (m_bUseValueAndKey)
+            return m_legend;
+
+        return std::vector<std::wstring>(1, L"NO LEGEND VALUES");
+    }
+
+    std::vector<std::wstring> GetKeyVector() const
+    {
+        if (m_bUseValueAndKey)
+            return m_keys;
+
+        return std::vector<std::wstring>(1, L"NO KEYS");
+    }
+
+    std::wstring GetKeyForIndex(size_t index) const
+    {
+        if (m_bUseValueAndKey && (index < m_current_graph_count))
+            return m_keys[index];
+        return L"";
+    }
+
+    double GetMaxValue() const { return m_max_value; }
+
+    double GetMaxValueRaw() const { return m_max_value_raw; }
+
+
+    std::vector<DATA_VALUE_T> GetValuesForKey(const std::wstring& key) const {
+        for(size_t i=0; i<m_current_graph_count; ++i){
+            if (key == m_keys[i]) {
+                return std::vector<DATA_VALUE_T>(m_data_filtered[i]);
+            }
+        }
+        return std::vector<DATA_VALUE_T>();
+    }
 
 private:
     void UpdateMaximumValues()
@@ -358,25 +394,6 @@ private:
         }
     }
 
-
-    std::vector<std::wstring> GetLegendVector() const
-    {
-        if (m_bUseValueAndKey)
-            return m_legend;
-
-        return std::vector<std::wstring>(1, L"NO LEGEND VALUES");
-    }
-
-    std::wstring GetLegendForIndex(size_t index) const
-    {
-        if (m_bUseValueAndKey && (index < m_current_graph_count))
-            return m_legend[index];
-        return L"";
-    }
-
-    double GetMaxValue() const { return m_max_value; }
-
-    double GetMaxValueRaw() const { return m_max_value_raw; }
 
 
 private:

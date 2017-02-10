@@ -42,7 +42,7 @@ int main() {
 
 
     CStatisticsStorage new_stat(5, cMAX_DISKS, 0, 3);
-    std::vector<double> values = {1,2,3,5,4};
+    std::vector<double> values = {1,2,3,4,5};
 
     std::vector<std::wstring> keys;
     keys.push_back(L"Model a");
@@ -58,10 +58,8 @@ int main() {
     legend.push_back(L"Legend e");
     legend.push_back(L"Legend f");
 
-
     new_stat.AddValuesWithKeys(values, keys, legend);
-
-    values.pop_back();
+    new_stat.AddValuesWithKeys(values, keys, legend);
 
     keys.clear();
     keys.push_back(L"Model a");
@@ -74,7 +72,21 @@ int main() {
     legend.push_back(L"Legend b");
     legend.push_back(L"Legend c");
     legend.push_back(L"Legend f");
+
+    values = {1,9,2,5};
     new_stat.AddValuesWithKeys(values, keys, legend);
+
+    std::vector<std::wstring> key_out = new_stat.GetKeyVector();
+
+    for(const auto& val : key_out) {
+        std::cout << val.c_str() << '\n';
+        std::vector<CStatisticsStorage::DATA_VALUE_T> values_out = new_stat.GetValuesForKey(val);
+        for(const auto& retval : values_out) {
+            std::cout << retval.value << ' ';
+        }
+        std::cout << '\n';
+    }
+
 
 //    new_stat.AddValues(values);
 //    new_stat.AddValues(values);
