@@ -6,5 +6,5 @@ project(StatisticsStorage)
 set(CMAKE_CXX_FLAGS "${CMAKE_CXX_FLAGS} -Wall -Wno-unused-variable -Wno-reorder -Wno-unknown-pragmas -std=c++03")
 
 
-set(SOURCE_FILES main.cpp TempStatistics.cpp StatisticsStorage.cpp StatisticsStorage.h)
+set(SOURCE_FILES main.cpp TempStatistics.cpp StatisticsStorage.h)
 add_executable(StatisticsStorage ${SOURCE_FILES})

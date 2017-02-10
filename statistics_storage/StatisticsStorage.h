@@ -34,6 +34,9 @@ public:
         , m_bSkipZeroValuesForFiltering(false)
     {
 
+        // if current_graphs == 0, then use keys to determine graph indices
+        m_bUseValueAndKey = current_graphs == 0;
+
         m_data_raw.reserve(max_graphs);
         m_data_filtered.reserve(max_graphs);
         m_keys.reserve(max_graphs);
@@ -54,6 +57,9 @@ public:
             m_data_raw.push_back(vval);
             m_data_filtered.push_back(vval);
         }
+
+        m_max_value     = -1e10;
+        m_max_value_raw = -1e10;
     }
 
     virtual ~CStatisticsStorage() {}
@@ -78,6 +84,10 @@ public:
     // adds a vector of values and applies the timestamp 'Now()'
     size_t AddValues(std::vector<double> values)
     {
+        if (!m_bUseValueAndKey) {
+            throw(std::runtime_error("AddValues: statistics intended for use with keys -> otherwise set number of graphs manually."));
+        }
+
         if (m_current_graph_count != values.size()) {
             // how to react to a wrong number of elements passed to the
             // function?
@@ -92,7 +102,10 @@ public:
         DATA_VALUE_T val;
         val.timestamp = Now();
         for (size_t i = 0; i < m_current_graph_count; ++i) {
-            val.value                = values[i];
+            val.value = values[i];
+            if (val.value > m_max_value_raw) {
+                m_max_value_raw = val.value;
+            }
             m_data_raw[i][m_current] = val;
         }
 
@@ -130,6 +143,9 @@ public:
     // clang-format on
     size_t AddValuesWithKeys(std::vector<double> values, std::vector<std::wstring> keys, std::vector<std::wstring> legend)
     {
+        if (!m_bUseValueAndKey) {
+            throw(std::runtime_error("AddValuesWithKeys: statistics not intended for use with keys -> set current_graphs to 0 when calling ctor."));
+        }
         if (values.size() > m_max_graphs) {
             throw(std::runtime_error("AddValuesWithKeys: too many values"));
         }
@@ -141,7 +157,9 @@ public:
         }
 
 
-        bool bToRemove = true;
+        bool bToRemove            = true;
+        bool bUpdateMaximumValues = false;
+
         while (bToRemove) {
             std::vector<int> to_remove(m_keys.size(), -1);
             size_t           iFoundCount = 0;
@@ -163,12 +181,12 @@ public:
                     // -> remove values for this key and reorder remaining values, keys and legend text
                     if (-1 == to_remove[i]) {
                         RemoveFromStatistics(i);
+                        bUpdateMaximumValues = true;
                         break;
                     }
                 }
             }
         }
-
 
         // determine the position where to insert new value
         if (m_current_value_count) {
@@ -184,7 +202,10 @@ public:
             for (size_t j = 0; j < m_keys.size(); ++j) {
                 if (keys[i] == m_keys[j]) {
                     // yes, found at position j -> insert value, key, legend
-                    val.value                = values[i];
+                    val.value = values[i];
+                    if (val.value > m_max_value_raw) {
+                        m_max_value_raw = val.value;
+                    }
                     m_data_raw[j][m_current] = val;
                     m_keys[j]                = keys[i];
                     m_legend[j]              = legend[i];
@@ -195,7 +216,10 @@ public:
 
             if (!bFound && m_keys.size() < m_max_graphs) {
                 // key with value keys[i] not found -> append to statistics if current_keys < m_max_graphs
-                val.value                            = values[i];
+                val.value = values[i];
+                if (val.value > m_max_value_raw) {
+                    m_max_value_raw = val.value;
+                }
                 m_data_raw[m_keys.size()][m_current] = val;
                 m_keys.push_back(keys[i]);
                 m_legend.push_back(legend[i]);
@@ -210,15 +234,37 @@ public:
 
         PerformFiltering();
 
+        if (bUpdateMaximumValues) {
+            UpdateMaximumValues();
+        }
+
         return m_current_value_count;
     }
 
 
 private:
+    void UpdateMaximumValues()
+    {
+        m_max_value = m_max_value_raw = -1e10;
+        for(size_t i=0; i<m_current_graph_count;++i){
+            for(size_t j=0;j<m_current_value_count;++j) {
+                if(m_data_raw[i][j].value > m_max_value_raw) {
+                    m_max_value_raw = m_data_raw[i][j].value;
+                }
+                if(m_data_filtered[i][j].value > m_max_value) {
+                    m_max_value = m_data_filtered[i][j].value;
+                }
+            }
+        }
+    }
+
     void AddCurrentRawValuesAsFilteredValues()
     {
         for (size_t i = 0; i < m_current_graph_count; ++i) {
             m_data_filtered[i][m_current] = m_data_raw[i][m_current];
+            if (m_data_filtered[i][m_current].value > m_max_value) {
+                m_max_value = m_data_filtered[i][m_current].value;
+            }
         }
     }
 
@@ -304,8 +350,33 @@ private:
                 fval /= sumCount;
             val.value                     = fval;
             m_data_filtered[i][m_current] = val;
+
+            // update maximum value
+            if (fval > m_max_value) {
+                m_max_value = fval;
+            }
         }
     }
+
+
+    std::vector<std::wstring> GetLegendVector() const
+    {
+        if (m_bUseValueAndKey)
+            return m_legend;
+
+        return std::vector<std::wstring>(1, L"NO LEGEND VALUES");
+    }
+
+    std::wstring GetLegendForIndex(size_t index) const
+    {
+        if (m_bUseValueAndKey && (index < m_current_graph_count))
+            return m_legend[index];
+        return L"";
+    }
+
+    double GetMaxValue() const { return m_max_value; }
+
+    double GetMaxValueRaw() const { return m_max_value_raw; }
 
 
 private:
@@ -328,6 +399,10 @@ private:
     bool   m_bActive;
     size_t m_ActiveCounter;
     bool   m_bSkipZeroValuesForFiltering;
+    bool   m_bUseValueAndKey; // state if statistics should use values and keys to determine indices or just indices
+
+    double m_max_value;
+    double m_max_value_raw;
 };
 
 #endif // STATISTICSSTORAGE_H
