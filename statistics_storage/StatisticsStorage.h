@@ -84,7 +84,7 @@ public:
     // adds a vector of values and applies the timestamp 'Now()'
     size_t AddValues(std::vector<double> values)
     {
-        if (!m_bUseValueAndKey) {
+        if (m_bUseValueAndKey) {
             throw(std::runtime_error("AddValues: statistics intended for use with keys -> otherwise set number of graphs manually."));
         }
 
