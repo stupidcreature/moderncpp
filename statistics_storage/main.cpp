@@ -41,7 +41,8 @@ int main() {
     }
 
 
-    CStatisticsStorage new_stat(5, cMAX_DISKS, 0, 3);
+    CStatisticsStorage new_stat(5, cMAX_DISKS, 0, 3, true);
+
     std::vector<double> values = {1,2,3,4,5};
 
     std::vector<std::wstring> keys;
@@ -75,11 +76,15 @@ int main() {
 
     values = {1,9,2,5};
     new_stat.AddValuesWithKeys(values, keys, legend);
+    new_stat.AddValuesWithKeys(values, keys, legend);
+    new_stat.AddValuesWithKeys(values, keys, legend);
+    new_stat.AddValuesWithKeys(values, keys, legend);
 
     std::vector<std::wstring> key_out = new_stat.GetKeyVector();
 
     for(const auto& val : key_out) {
-        std::cout << val.c_str() << '\n';
+        wprintf(L"%ls ", val.c_str());
+        //std::vector<CStatisticsStorage::DATA_VALUE_T> values_out = new_stat.GetValuesForKey(val);
         std::vector<CStatisticsStorage::DATA_VALUE_T> values_out = new_stat.GetValuesForKey(val);
         for(const auto& retval : values_out) {
             std::cout << retval.value << ' ';
@@ -99,50 +104,50 @@ int main() {
 //    new_stat.AddValues(values);
 
 
-    CTempStatistics old_stat;
-    old_stat.SetStatSize(200);
-    old_stat.SetFilterLength(5);
-
-
-
-    for (int i = 0; i < 10000; ++i) {
-
-        old_stat.AddValueAndKey(m_MD.DiskData.HDD_Temps[0].Temperature, m_MD.DiskData.HDD_Temps[0].ModelKey,
-                               m_MD.DiskData.HDD_Temps[0].ModelStr,
-                               m_MD.DiskData.HDD_Temps[1].Temperature, m_MD.DiskData.HDD_Temps[1].ModelKey,
-                               m_MD.DiskData.HDD_Temps[1].ModelStr,
-                               m_MD.DiskData.HDD_Temps[2].Temperature, m_MD.DiskData.HDD_Temps[2].ModelKey,
-                               m_MD.DiskData.HDD_Temps[2].ModelStr,
-                               m_MD.DiskData.HDD_Temps[3].Temperature, m_MD.DiskData.HDD_Temps[3].ModelKey,
-                               m_MD.DiskData.HDD_Temps[3].ModelStr,
-                               m_MD.DiskData.HDD_Temps[4].Temperature, m_MD.DiskData.HDD_Temps[4].ModelKey,
-                               m_MD.DiskData.HDD_Temps[4].ModelStr,
-                               m_MD.DiskData.HDD_Temps[5].Temperature, m_MD.DiskData.HDD_Temps[5].ModelKey,
-                               m_MD.DiskData.HDD_Temps[5].ModelStr,
-                               m_MD.DiskData.HDD_Temps[6].Temperature, m_MD.DiskData.HDD_Temps[6].ModelKey,
-                               m_MD.DiskData.HDD_Temps[6].ModelStr,
-                               m_MD.DiskData.HDD_Temps[7].Temperature, m_MD.DiskData.HDD_Temps[7].ModelKey,
-                               m_MD.DiskData.HDD_Temps[7].ModelStr,
-                               m_MD.DiskData.HDD_Temps[8].Temperature, m_MD.DiskData.HDD_Temps[8].ModelKey,
-                               m_MD.DiskData.HDD_Temps[8].ModelStr,
-                               m_MD.DiskData.HDD_Temps[9].Temperature, m_MD.DiskData.HDD_Temps[9].ModelKey,
-                               m_MD.DiskData.HDD_Temps[9].ModelStr,
-                               m_MD.DiskData.HDD_Temps[10].Temperature, m_MD.DiskData.HDD_Temps[10].ModelKey,
-                               m_MD.DiskData.HDD_Temps[10].ModelStr,
-                               m_MD.DiskData.HDD_Temps[11].Temperature, m_MD.DiskData.HDD_Temps[11].ModelKey,
-                               m_MD.DiskData.HDD_Temps[11].ModelStr,
-                               m_MD.DiskData.HDD_Temps[12].Temperature, m_MD.DiskData.HDD_Temps[12].ModelKey,
-                               m_MD.DiskData.HDD_Temps[12].ModelStr,
-                               m_MD.DiskData.HDD_Temps[13].Temperature, m_MD.DiskData.HDD_Temps[13].ModelKey,
-                               m_MD.DiskData.HDD_Temps[13].ModelStr,
-                               m_MD.DiskData.HDD_Temps[14].Temperature, m_MD.DiskData.HDD_Temps[14].ModelKey,
-                               m_MD.DiskData.HDD_Temps[14].ModelStr,
-                               m_MD.DiskData.HDD_Temps[15].Temperature, m_MD.DiskData.HDD_Temps[15].ModelKey,
-                               m_MD.DiskData.HDD_Temps[15].ModelStr
-        );
-    }
-
-    old_stat.DuplicateLastEntries();
+//    CTempStatistics old_stat;
+//    old_stat.SetStatSize(200);
+//    old_stat.SetFilterLength(5);
+//
+//
+//
+//    for (int i = 0; i < 10000; ++i) {
+//
+//        old_stat.AddValueAndKey(m_MD.DiskData.HDD_Temps[0].Temperature, m_MD.DiskData.HDD_Temps[0].ModelKey,
+//                               m_MD.DiskData.HDD_Temps[0].ModelStr,
+//                               m_MD.DiskData.HDD_Temps[1].Temperature, m_MD.DiskData.HDD_Temps[1].ModelKey,
+//                               m_MD.DiskData.HDD_Temps[1].ModelStr,
+//                               m_MD.DiskData.HDD_Temps[2].Temperature, m_MD.DiskData.HDD_Temps[2].ModelKey,
+//                               m_MD.DiskData.HDD_Temps[2].ModelStr,
+//                               m_MD.DiskData.HDD_Temps[3].Temperature, m_MD.DiskData.HDD_Temps[3].ModelKey,
+//                               m_MD.DiskData.HDD_Temps[3].ModelStr,
+//                               m_MD.DiskData.HDD_Temps[4].Temperature, m_MD.DiskData.HDD_Temps[4].ModelKey,
+//                               m_MD.DiskData.HDD_Temps[4].ModelStr,
+//                               m_MD.DiskData.HDD_Temps[5].Temperature, m_MD.DiskData.HDD_Temps[5].ModelKey,
+//                               m_MD.DiskData.HDD_Temps[5].ModelStr,
+//                               m_MD.DiskData.HDD_Temps[6].Temperature, m_MD.DiskData.HDD_Temps[6].ModelKey,
+//                               m_MD.DiskData.HDD_Temps[6].ModelStr,
+//                               m_MD.DiskData.HDD_Temps[7].Temperature, m_MD.DiskData.HDD_Temps[7].ModelKey,
+//                               m_MD.DiskData.HDD_Temps[7].ModelStr,
+//                               m_MD.DiskData.HDD_Temps[8].Temperature, m_MD.DiskData.HDD_Temps[8].ModelKey,
+//                               m_MD.DiskData.HDD_Temps[8].ModelStr,
+//                               m_MD.DiskData.HDD_Temps[9].Temperature, m_MD.DiskData.HDD_Temps[9].ModelKey,
+//                               m_MD.DiskData.HDD_Temps[9].ModelStr,
+//                               m_MD.DiskData.HDD_Temps[10].Temperature, m_MD.DiskData.HDD_Temps[10].ModelKey,
+//                               m_MD.DiskData.HDD_Temps[10].ModelStr,
+//                               m_MD.DiskData.HDD_Temps[11].Temperature, m_MD.DiskData.HDD_Temps[11].ModelKey,
+//                               m_MD.DiskData.HDD_Temps[11].ModelStr,
+//                               m_MD.DiskData.HDD_Temps[12].Temperature, m_MD.DiskData.HDD_Temps[12].ModelKey,
+//                               m_MD.DiskData.HDD_Temps[12].ModelStr,
+//                               m_MD.DiskData.HDD_Temps[13].Temperature, m_MD.DiskData.HDD_Temps[13].ModelKey,
+//                               m_MD.DiskData.HDD_Temps[13].ModelStr,
+//                               m_MD.DiskData.HDD_Temps[14].Temperature, m_MD.DiskData.HDD_Temps[14].ModelKey,
+//                               m_MD.DiskData.HDD_Temps[14].ModelStr,
+//                               m_MD.DiskData.HDD_Temps[15].Temperature, m_MD.DiskData.HDD_Temps[15].ModelKey,
+//                               m_MD.DiskData.HDD_Temps[15].ModelStr
+//        );
+//    }
+//
+//    old_stat.DuplicateLastEntries();
 
 
     return 0;

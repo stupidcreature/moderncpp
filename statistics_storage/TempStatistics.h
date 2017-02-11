@@ -4,24 +4,26 @@
 #define TempStatisticsH
 
 //#include "definitions.h"
-#include <ctime>
 #include <deque>
 #include <list>
 #include <map>
 #include <set>
-#include <string>
 #include <vector>
+#include <ctime>
 
-const unsigned int   cMAX_GRAPHS = 16; // bei Aenderungen hier muss CTempStatistics angepasst werden
-typedef time_t       TDateTime;
+
+const unsigned int cMAX_GRAPHS = 16; // bei Aenderungen hier muss CTempStatistics angepasst werden
+typedef time_t TDateTime;
 typedef std::wstring UnicodeString;
 typedef unsigned int DWORD;
 
 typedef struct {
-    double    T[cMAX_GRAPHS];
+    double T[cMAX_GRAPHS];
     TDateTime Timestamp;
 } TEMPREC;
 typedef std::deque<TEMPREC> TEMPSTAT;
+
+
 
 
 class CTempStatistics {
@@ -54,14 +56,14 @@ public:
     unsigned int GetStatWidth() { return m_nStatWidth; }
 
     void AddValue(double val1, double val2, double val3, double val4, double val5 = 0, double val6 = 0, double val7 = 0,
-                  double val8 = 0,
-                  double val9 = 0, double val10 = 0, double val11 = 0, double val12 = 0, double val13 = 0,
-                  double val14 = 0, double val15 = 0, double val16 = 0);
+        double val8 = 0,
+        double val9 = 0, double val10 = 0, double val11 = 0, double val12 = 0, double val13 = 0,
+        double val14 = 0, double val15 = 0, double val16 = 0);
 
     void AddValueWithTimestamp(TDateTime datetime, double val1, double val2, double val3, double val4, double val5 = 0,
-                               double val6 = 0, double val7 = 0, double val8 = 0,
-                               double val9 = 0, double val10 = 0, double val11 = 0, double val12 = 0, double val13 = 0,
-                               double val14 = 0, double val15 = 0, double val16 = 0);
+        double val6 = 0, double val7 = 0, double val8 = 0,
+        double val9 = 0, double val10 = 0, double val11 = 0, double val12 = 0, double val13 = 0,
+        double val14 = 0, double val15 = 0, double val16 = 0);
 
     void AddValueAndKey(double val1, UnicodeString key1, UnicodeString legend1, double val2, UnicodeString key2,
                         UnicodeString legend2, double val3, UnicodeString key3, UnicodeString legend3, double val4,
@@ -134,13 +136,13 @@ protected:
     virtual void UpdateMaxValue();
 
     void FixMapping(const UnicodeString& key1, const UnicodeString& key2, const UnicodeString& key3,
-                    const UnicodeString& key4,
-                    const UnicodeString& key5, const UnicodeString& key6, const UnicodeString& key7,
-                    const UnicodeString& key8,
-                    const UnicodeString& key9, const UnicodeString& key10, const UnicodeString& key11,
-                    const UnicodeString& key12,
-                    const UnicodeString& key13, const UnicodeString& key14, const UnicodeString& key15,
-                    const UnicodeString& key16);
+        const UnicodeString& key4,
+        const UnicodeString& key5, const UnicodeString& key6, const UnicodeString& key7,
+        const UnicodeString& key8,
+        const UnicodeString& key9, const UnicodeString& key10, const UnicodeString& key11,
+        const UnicodeString& key12,
+        const UnicodeString& key13, const UnicodeString& key14, const UnicodeString& key15,
+        const UnicodeString& key16);
 
     void RemoveFromStatistics(int indextoremove);
 
@@ -150,15 +152,15 @@ protected:
 
     TEMPSTAT m_dTempStat;
     TEMPSTAT m_dTempStatRaw;
-    size_t   m_dStatSize;
-    size_t   m_nStatWidth;
-    size_t   m_nFilterLength;
-    bool     m_bAllowZeroValues;
-    DWORD    m_dwMaxIndexForMaximumCalculation;
-    bool     m_bActive;
-    DWORD    m_dwActiveCounter;
-    bool     m_bSkipZeroValuesForFiltering;
-    int      m_iClassID;
+    size_t m_dStatSize;
+    size_t m_nStatWidth;
+    size_t m_nFilterLength;
+    bool m_bAllowZeroValues;
+    DWORD m_dwMaxIndexForMaximumCalculation;
+    bool m_bActive;
+    DWORD m_dwActiveCounter;
+    bool m_bSkipZeroValuesForFiltering;
+    int m_iClassID;
 
     double m_MaxTempSoFar;
     double m_MaxTempSoFarRaw;

@@ -6,6 +6,7 @@
 #include <string>
 #include <vector>
 
+
 class CStatisticsStorage {
 
 public:
@@ -14,6 +15,7 @@ public:
         std::chrono::system_clock::time_point timestamp;
     } DATA_VALUE_T;
 
+    static const double cINVALID_VALUE;
 
     /** Constructor to create a StatisticsStorage
      * @param max_values_per_graph  how many values the statistics can hold
@@ -22,7 +24,7 @@ public:
      * @param filter_length         how many values should be used for filtering
      */
     CStatisticsStorage(size_t max_values_per_graph, size_t max_graphs,
-                       size_t current_graphs, size_t filter_length)
+                       size_t current_graphs, size_t filter_length, bool skip_zero_values_for_filtering)
         : m_current_value_count(0)
         , m_max_values(max_values_per_graph)
         , m_max_graphs(max_graphs)
@@ -31,7 +33,7 @@ public:
         , m_filter_length(filter_length)
         , m_ActiveCounter(0)
         , m_bActive(true)
-        , m_bSkipZeroValuesForFiltering(false)
+        , m_bSkipZeroValuesForFiltering(skip_zero_values_for_filtering)
     {
 
         // if current_graphs == 0, then use keys to determine graph indices
@@ -43,7 +45,7 @@ public:
         m_legend.reserve(max_graphs);
 
         DATA_VALUE_T val;
-        val.value     = 0;
+        val.value     = cINVALID_VALUE;
         val.timestamp = Now();
 
 
@@ -269,10 +271,22 @@ public:
     double GetMaxValueRaw() const { return m_max_value_raw; }
 
 
-    std::vector<DATA_VALUE_T> GetValuesForKey(const std::wstring& key) const {
-        for(size_t i=0; i<m_current_graph_count; ++i){
+    std::vector<DATA_VALUE_T> GetValuesForKey(const std::wstring& key) const
+    {
+        for (size_t i = 0; i < m_current_graph_count; ++i) {
             if (key == m_keys[i]) {
                 return std::vector<DATA_VALUE_T>(m_data_filtered[i]);
+            }
+        }
+        return std::vector<DATA_VALUE_T>();
+    }
+
+
+    std::vector<DATA_VALUE_T> GetRawValuesForKey(const std::wstring& key) const
+    {
+        for (size_t i = 0; i < m_current_graph_count; ++i) {
+            if (key == m_keys[i]) {
+                return std::vector<DATA_VALUE_T>(m_data_raw[i]);
             }
         }
         return std::vector<DATA_VALUE_T>();
@@ -282,12 +296,12 @@ private:
     void UpdateMaximumValues()
     {
         m_max_value = m_max_value_raw = -1e10;
-        for(size_t i=0; i<m_current_graph_count;++i){
-            for(size_t j=0;j<m_current_value_count;++j) {
-                if(m_data_raw[i][j].value > m_max_value_raw) {
+        for (size_t i = 0; i < m_current_graph_count; ++i) {
+            for (size_t j = 0; j < m_current_value_count; ++j) {
+                if (m_data_raw[i][j].value > m_max_value_raw) {
                     m_max_value_raw = m_data_raw[i][j].value;
                 }
-                if(m_data_filtered[i][j].value > m_max_value) {
+                if (m_data_filtered[i][j].value > m_max_value) {
                     m_max_value = m_data_filtered[i][j].value;
                 }
             }
@@ -311,7 +325,12 @@ private:
     // but not important, as this functions should rarely be called
     void RemoveFromStatistics(size_t index_to_remove)
     {
-        for (size_t i = index_to_remove; i < m_current_graph_count - 1; ++i) {
+        if (!m_current_graph_count) {
+            return;
+        }
+
+
+        for (size_t i = index_to_remove; i < m_current_graph_count - 2; ++i) {
             for (size_t j = 0; j < m_current_value_count; ++j) {
                 m_data_raw[i][j]      = m_data_raw[i + 1][j];
                 m_data_filtered[i][j] = m_data_filtered[i + 1][j];
@@ -319,11 +338,84 @@ private:
             m_keys[i]   = m_keys[i + 1];
             m_legend[i] = m_legend[i + 1];
         }
+
+        DATA_VALUE_T val;
+        val.timestamp = Now();
+        val.value     = cINVALID_VALUE;
+        for (size_t j = 0; j < m_current_value_count; ++j) {
+            m_data_raw[m_current_graph_count - 1][j]      = val;
+            m_data_filtered[m_current_graph_count - 1][j] = val;
+        }
         m_keys.pop_back();
         m_legend.pop_back();
         --m_current_graph_count;
     }
 
+
+    void RefilterAll()
+    {
+
+        m_max_value = m_max_value_raw = -1e10;
+
+        size_t filter_count = (m_current_value_count < m_filter_length) ? m_current_value_count : m_filter_length;
+
+        for (size_t index = 0; index < m_current_value_count; ++index) {
+
+
+            // bei gerade aktivierter GPU moeglichst steile 'An-Flanke'
+            // -> Filterung nicht fuer m_nFilterLength sondern nur fuer die Anzahl der Werte nach der Aktivierung durchfuehren
+            // m_bSkipZeroValuesForFiltering muss dafuer true sein
+            if (m_ActiveCounter < filter_count) {
+                filter_count = m_ActiveCounter;
+            }
+
+
+            if (filter_count == 0) {
+                for (size_t i = 0; i < m_current_graph_count; ++i) {
+                    m_data_filtered[i][index] = m_data_raw[i][index];
+                    if (m_data_filtered[i][index].value > m_max_value) {
+                        m_max_value = m_data_filtered[i][index].value;
+                    }
+                }
+            }
+
+            for (size_t i = 0; i < m_current_graph_count; i++) {
+                double fval        = 0;
+                size_t sumCount    = 0;
+                size_t filterIndex = index;
+
+                DATA_VALUE_T val = m_data_raw[i][index];
+
+                for (size_t j = 0; j < filter_count; j++) {
+                    if (!m_bSkipZeroValuesForFiltering) {
+                        if (m_data_raw[i][filterIndex].value != cINVALID_VALUE) {
+                            fval += m_data_raw[i][filterIndex].value;
+                            sumCount++;
+                        }
+                    } else {
+                        if ((m_data_raw[i][filterIndex].value != 0) && (m_data_raw[i][filterIndex].value != cINVALID_VALUE)) {
+                            fval += m_data_raw[i][filterIndex].value;
+                            sumCount++;
+                        }
+                    }
+                    if (filterIndex > 0) {
+                        --filterIndex;
+                    } else {
+                        filterIndex = m_max_values - 1;
+                    }
+                }
+                if (sumCount > 0)
+                    fval /= sumCount;
+                val.value                 = fval;
+                m_data_filtered[i][index] = val;
+
+                // update maximum value
+                if (fval > m_max_value) {
+                    m_max_value = fval;
+                }
+            }
+        }
+    }
 
     void PerformFiltering()
     {
@@ -346,11 +438,6 @@ private:
 
         size_t filter_count = (m_current_value_count < m_filter_length) ? m_current_value_count : m_filter_length;
 
-        if (filter_count == 0) {
-            AddCurrentRawValuesAsFilteredValues();
-            return;
-        }
-
         // bei gerade aktivierter GPU moeglichst steile 'An-Flanke'
         // -> Filterung nicht fuer m_nFilterLength sondern nur fuer die Anzahl der Werte nach der Aktivierung durchfuehren
         // m_bSkipZeroValuesForFiltering muss dafuer true sein
@@ -358,6 +445,10 @@ private:
             filter_count = m_ActiveCounter;
         }
 
+        if (filter_count == 0) {
+            AddCurrentRawValuesAsFilteredValues();
+            return;
+        }
 
         for (size_t i = 0; i < m_current_graph_count; i++) {
             double fval        = 0;
@@ -368,10 +459,12 @@ private:
 
             for (size_t j = 0; j < filter_count; j++) {
                 if (!m_bSkipZeroValuesForFiltering) {
-                    fval += m_data_raw[i][filterIndex].value;
-                    sumCount++;
+                    if (m_data_raw[i][filterIndex].value != cINVALID_VALUE) {
+                        fval += m_data_raw[i][filterIndex].value;
+                        sumCount++;
+                    }
                 } else {
-                    if (m_data_raw[i][filterIndex].value > 0) {
+                    if ((m_data_raw[i][filterIndex].value != 0) && (m_data_raw[i][filterIndex].value != cINVALID_VALUE)) {
                         fval += m_data_raw[i][filterIndex].value;
                         sumCount++;
                     }
@@ -393,7 +486,6 @@ private:
             }
         }
     }
-
 
 
 private:
@@ -421,5 +513,7 @@ private:
     double m_max_value;
     double m_max_value_raw;
 };
+
+const double CStatisticsStorage::cINVALID_VALUE = -1.23e40d;
 
 #endif // STATISTICSSTORAGE_H
