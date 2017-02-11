@@ -9,11 +9,14 @@
 
 class CStatisticsStorage {
 
+    //    typedef time_t TDateTime;
+    typedef std::chrono::system_clock::time_point TDateTime;
+
 public:
-    typedef struct {
-        double                                value;
-        std::chrono::system_clock::time_point timestamp;
-    } DATA_VALUE_T;
+    //    typedef struct {
+    //        double                                value;
+    //        std::chrono::system_clock::time_point timestamp;
+    //    } DATA_VALUE_T;
 
     static const double cINVALID_VALUE;
 
@@ -44,15 +47,18 @@ public:
         m_keys.reserve(max_graphs);
         m_legend.reserve(max_graphs);
 
-        DATA_VALUE_T val;
-        val.value     = cINVALID_VALUE;
-        val.timestamp = Now();
-
-
-        std::vector<DATA_VALUE_T> vval;
+        double              val = cINVALID_VALUE;
+        std::vector<double> vval;
         vval.reserve(m_max_values);
         for (size_t j = 0; j < m_max_values; ++j) {
             vval.push_back(val);
+        }
+
+        TDateTime              timestamp = Now();
+        std::vector<TDateTime> vts;
+        vts.reserve(m_max_values);
+        for (size_t j = 0; j < m_max_values; ++j) {
+            m_timestamps.push_back(timestamp);
         }
 
         for (size_t i = 0; i < max_graphs; ++i) {
@@ -101,15 +107,13 @@ public:
             m_current = (m_current + 1) % m_max_values;
         }
 
-        DATA_VALUE_T val;
-        val.timestamp = Now();
         for (size_t i = 0; i < m_current_graph_count; ++i) {
-            val.value = values[i];
-            if (val.value > m_max_value_raw) {
-                m_max_value_raw = val.value;
+            if (values[i] > m_max_value_raw) {
+                m_max_value_raw = values[i];
             }
-            m_data_raw[i][m_current] = val;
+            m_data_raw[i][m_current] = values[i];
         }
+        m_timestamps[m_current] = Now();
 
         if (m_current_value_count < m_max_values) {
             ++m_current_value_count;
@@ -195,8 +199,6 @@ public:
             m_current = (m_current + 1) % m_max_values;
         }
 
-        DATA_VALUE_T val;
-        val.timestamp = Now();
 
         for (size_t i = 0; i < keys.size(); ++i) {
             // check, if keys[i] exists in m_keys
@@ -204,11 +206,10 @@ public:
             for (size_t j = 0; j < m_keys.size(); ++j) {
                 if (keys[i] == m_keys[j]) {
                     // yes, found at position j -> insert value, key, legend
-                    val.value = values[i];
-                    if (val.value > m_max_value_raw) {
-                        m_max_value_raw = val.value;
+                    if (values[i] > m_max_value_raw) {
+                        m_max_value_raw = values[i];
                     }
-                    m_data_raw[j][m_current] = val;
+                    m_data_raw[j][m_current] = values[i];
                     m_keys[j]                = keys[i];
                     m_legend[j]              = legend[i];
                     bFound                   = true;
@@ -218,16 +219,17 @@ public:
 
             if (!bFound && m_keys.size() < m_max_graphs) {
                 // key with value keys[i] not found -> append to statistics if current_keys < m_max_graphs
-                val.value = values[i];
-                if (val.value > m_max_value_raw) {
-                    m_max_value_raw = val.value;
+                if (values[i] > m_max_value_raw) {
+                    m_max_value_raw = values[i];
                 }
-                m_data_raw[m_keys.size()][m_current] = val;
+                m_data_raw[m_keys.size()][m_current] = values[i];
                 m_keys.push_back(keys[i]);
                 m_legend.push_back(legend[i]);
                 ++m_current_graph_count;
             }
         }
+
+        m_timestamps[m_current] = Now();
 
 
         if (m_current_value_count < m_max_values) {
@@ -271,25 +273,30 @@ public:
     double GetMaxValueRaw() const { return m_max_value_raw; }
 
 
-    std::vector<DATA_VALUE_T> GetValuesForKey(const std::wstring& key) const
+    std::vector<double> GetValuesForKey(const std::wstring& key) const
     {
         for (size_t i = 0; i < m_current_graph_count; ++i) {
             if (key == m_keys[i]) {
-                return std::vector<DATA_VALUE_T>(m_data_filtered[i]);
+                return std::vector<double>(m_data_filtered[i]);
             }
         }
-        return std::vector<DATA_VALUE_T>();
+        return std::vector<double>();
     }
 
 
-    std::vector<DATA_VALUE_T> GetRawValuesForKey(const std::wstring& key) const
+    std::vector<double> GetRawValuesForKey(const std::wstring& key) const
     {
         for (size_t i = 0; i < m_current_graph_count; ++i) {
             if (key == m_keys[i]) {
-                return std::vector<DATA_VALUE_T>(m_data_raw[i]);
+                return std::vector<double>(m_data_raw[i]);
             }
         }
-        return std::vector<DATA_VALUE_T>();
+        return std::vector<double>();
+    }
+
+    std::vector<TDateTime> GetTimestamps() const
+    {
+        return std::vector<TDateTime>(m_timestamps);
     }
 
 private:
@@ -298,11 +305,11 @@ private:
         m_max_value = m_max_value_raw = -1e10;
         for (size_t i = 0; i < m_current_graph_count; ++i) {
             for (size_t j = 0; j < m_current_value_count; ++j) {
-                if (m_data_raw[i][j].value > m_max_value_raw) {
-                    m_max_value_raw = m_data_raw[i][j].value;
+                if (m_data_raw[i][j] > m_max_value_raw) {
+                    m_max_value_raw = m_data_raw[i][j];
                 }
-                if (m_data_filtered[i][j].value > m_max_value) {
-                    m_max_value = m_data_filtered[i][j].value;
+                if (m_data_filtered[i][j] > m_max_value) {
+                    m_max_value = m_data_filtered[i][j];
                 }
             }
         }
@@ -312,8 +319,8 @@ private:
     {
         for (size_t i = 0; i < m_current_graph_count; ++i) {
             m_data_filtered[i][m_current] = m_data_raw[i][m_current];
-            if (m_data_filtered[i][m_current].value > m_max_value) {
-                m_max_value = m_data_filtered[i][m_current].value;
+            if (m_data_filtered[i][m_current] > m_max_value) {
+                m_max_value = m_data_filtered[i][m_current];
             }
         }
     }
@@ -339,9 +346,7 @@ private:
             m_legend[i] = m_legend[i + 1];
         }
 
-        DATA_VALUE_T val;
-        val.timestamp = Now();
-        val.value     = cINVALID_VALUE;
+        double val = cINVALID_VALUE;
         for (size_t j = 0; j < m_current_value_count; ++j) {
             m_data_raw[m_current_graph_count - 1][j]      = val;
             m_data_filtered[m_current_graph_count - 1][j] = val;
@@ -349,6 +354,14 @@ private:
         m_keys.pop_back();
         m_legend.pop_back();
         --m_current_graph_count;
+
+        // reset the timestamp vector after deleting the last graph
+        if (!m_current_graph_count) {
+            TDateTime now = Now();
+            for (size_t j = 0; j < m_current_value_count; ++j) {
+                m_timestamps[j] = now;
+            }
+        }
     }
 
 
@@ -373,8 +386,8 @@ private:
             if (filter_count == 0) {
                 for (size_t i = 0; i < m_current_graph_count; ++i) {
                     m_data_filtered[i][index] = m_data_raw[i][index];
-                    if (m_data_filtered[i][index].value > m_max_value) {
-                        m_max_value = m_data_filtered[i][index].value;
+                    if (m_data_filtered[i][index] > m_max_value) {
+                        m_max_value = m_data_filtered[i][index];
                     }
                 }
             }
@@ -384,17 +397,15 @@ private:
                 size_t sumCount    = 0;
                 size_t filterIndex = index;
 
-                DATA_VALUE_T val = m_data_raw[i][index];
-
                 for (size_t j = 0; j < filter_count; j++) {
                     if (!m_bSkipZeroValuesForFiltering) {
-                        if (m_data_raw[i][filterIndex].value != cINVALID_VALUE) {
-                            fval += m_data_raw[i][filterIndex].value;
+                        if (m_data_raw[i][filterIndex] != cINVALID_VALUE) {
+                            fval += m_data_raw[i][filterIndex];
                             sumCount++;
                         }
                     } else {
-                        if ((m_data_raw[i][filterIndex].value != 0) && (m_data_raw[i][filterIndex].value != cINVALID_VALUE)) {
-                            fval += m_data_raw[i][filterIndex].value;
+                        if ((m_data_raw[i][filterIndex] != 0) && (m_data_raw[i][filterIndex] != cINVALID_VALUE)) {
+                            fval += m_data_raw[i][filterIndex];
                             sumCount++;
                         }
                     }
@@ -404,10 +415,12 @@ private:
                         filterIndex = m_max_values - 1;
                     }
                 }
-                if (sumCount > 0)
+                if (sumCount > 0) {
                     fval /= sumCount;
-                val.value                 = fval;
-                m_data_filtered[i][index] = val;
+                } else {
+                    fval = cINVALID_VALUE;
+                }
+                m_data_filtered[i][index] = fval;
 
                 // update maximum value
                 if (fval > m_max_value) {
@@ -455,17 +468,15 @@ private:
             size_t sumCount    = 0;
             size_t filterIndex = m_current;
 
-            DATA_VALUE_T val = m_data_raw[i][m_current];
-
             for (size_t j = 0; j < filter_count; j++) {
                 if (!m_bSkipZeroValuesForFiltering) {
-                    if (m_data_raw[i][filterIndex].value != cINVALID_VALUE) {
-                        fval += m_data_raw[i][filterIndex].value;
+                    if (m_data_raw[i][filterIndex] != cINVALID_VALUE) {
+                        fval += m_data_raw[i][filterIndex];
                         sumCount++;
                     }
                 } else {
-                    if ((m_data_raw[i][filterIndex].value != 0) && (m_data_raw[i][filterIndex].value != cINVALID_VALUE)) {
-                        fval += m_data_raw[i][filterIndex].value;
+                    if ((m_data_raw[i][filterIndex] != 0) && (m_data_raw[i][filterIndex] != cINVALID_VALUE)) {
+                        fval += m_data_raw[i][filterIndex];
                         sumCount++;
                     }
                 }
@@ -475,10 +486,12 @@ private:
                     filterIndex = m_max_values - 1;
                 }
             }
-            if (sumCount > 0)
+            if (sumCount > 0) {
                 fval /= sumCount;
-            val.value                     = fval;
-            m_data_filtered[i][m_current] = val;
+            } else {
+                fval = cINVALID_VALUE;
+            }
+            m_data_filtered[i][m_current] = fval;
 
             // update maximum value
             if (fval > m_max_value) {
@@ -494,10 +507,11 @@ private:
         return std::chrono::system_clock::now();
     }
 
-    std::vector<std::vector<DATA_VALUE_T> > m_data_raw;
-    std::vector<std::vector<DATA_VALUE_T> > m_data_filtered;
-    std::vector<std::wstring>               m_keys;
-    std::vector<std::wstring>               m_legend;
+    std::vector<std::vector<double> > m_data_raw;
+    std::vector<std::vector<double> > m_data_filtered;
+    std::vector<TDateTime>            m_timestamps;
+    std::vector<std::wstring>         m_keys;
+    std::vector<std::wstring>         m_legend;
 
     size_t m_current;             // pointer to current (most recently added) element
     size_t m_current_graph_count; // number of 'parallel' graphs

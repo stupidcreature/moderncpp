@@ -85,9 +85,9 @@ int main() {
     for(const auto& val : key_out) {
         wprintf(L"%ls ", val.c_str());
         //std::vector<CStatisticsStorage::DATA_VALUE_T> values_out = new_stat.GetValuesForKey(val);
-        std::vector<CStatisticsStorage::DATA_VALUE_T> values_out = new_stat.GetValuesForKey(val);
+        std::vector<double > values_out = new_stat.GetValuesForKey(val);
         for(const auto& retval : values_out) {
-            std::cout << retval.value << ' ';
+            std::cout << retval << ' ';
         }
         std::cout << '\n';
     }
