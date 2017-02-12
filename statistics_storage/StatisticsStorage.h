@@ -55,7 +55,8 @@ public:
         for (size_t j = 0; j < m_max_values; ++j) {
             vval.push_back(val);
         }
-        m_output = vval;
+        m_output     = vval;
+        m_output_raw = vval;
 
         TDateTime              timestamp = Now();
         std::vector<TDateTime> vts;
@@ -157,8 +158,8 @@ public:
             return 0;
         }
 
-        size_t ret = CopyInternalData(m_data_raw, index, num_values, &m_output[0]);
-        values_out = &m_output[0];
+        size_t ret = CopyInternalData(m_data_raw, index, num_values, &m_output_raw[0]);
+        values_out = &m_output_raw[0];
         return ret;
     }
 
@@ -718,7 +719,8 @@ private:
     std::vector<std::wstring>         m_keys;
     std::vector<std::wstring>         m_legend;
 
-    std::vector<double> m_output; // vector with copy of internal data to be handed out
+    std::vector<double> m_output;       // vector with copy of internal data to be handed out
+    std::vector<double> m_output_raw;   // vector with copy of internal raw data to be handed out
 
     std::vector<bool>   m_bActive;
     std::vector<size_t> m_ActiveCounter;
