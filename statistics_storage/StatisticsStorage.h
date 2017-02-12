@@ -89,8 +89,6 @@ public:
                 m_data_filtered[i][j] = cINVALID_VALUE;
             }
             m_timestamps[i]    = now;
-            m_keys[i]          = L"";
-            m_legend[i]        = L"";
             m_ActiveCounter[i] = 0;
             m_bActive[i]       = true;
             m_max_value[i]     = cDEFAULT_MAX_RESET_VALUE;
@@ -100,6 +98,8 @@ public:
         m_current             = 0;
         m_current_value_count = 0;
 
+        // or keep them and only delete the values?
+        // would be deleted anyway during next insert operation
         if (m_bUseValueAndKey) {
             m_keys.clear();
             m_legend.clear();
