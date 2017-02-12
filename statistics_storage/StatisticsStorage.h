@@ -1,18 +1,23 @@
 #ifndef STATISTICSSTORAGE_H
 #define STATISTICSSTORAGE_H
 
-#include <chrono>
+#include <algorithm>
+//#include <chrono>
 #include <stdexcept>
 #include <string>
 #include <vector>
 
 
+static const double cDEFAULT_MAX_RESET_VALUE = -1e10;
+
 class CStatisticsStorage {
 
-    //    typedef time_t TDateTime;
-    typedef std::chrono::system_clock::time_point TDateTime;
-
 public:
+#ifndef __BCPLUSPLUS__
+    typedef time_t TDateTime;
+#endif
+    //typedef std::chrono::system_clock::time_point TDateTime;
+
     //    typedef struct {
     //        double                                value;
     //        std::chrono::system_clock::time_point timestamp;
@@ -25,6 +30,7 @@ public:
      * @param max_graphs            how many 'parallel' graphs can exist (for preallocating storage)
      * @param current_graphs        0 if key/legend scheme will be used, should be equal to max_graphs otherwise
      * @param filter_length         how many values should be used for filtering
+     * @param skip_zero_values_for_filtering         should zero values in statistics be taken into account when filtering
      */
     CStatisticsStorage(size_t max_values_per_graph, size_t max_graphs,
                        size_t current_graphs, size_t filter_length, bool skip_zero_values_for_filtering)
@@ -33,10 +39,6 @@ public:
         , m_max_graphs(max_graphs)
         , m_current(0)
         , m_current_graph_count(current_graphs)
-        , m_filter_length(filter_length)
-        , m_ActiveCounter(0)
-        , m_bActive(true)
-        , m_bSkipZeroValuesForFiltering(skip_zero_values_for_filtering)
     {
 
         // if current_graphs == 0, then use keys to determine graph indices
@@ -53,6 +55,7 @@ public:
         for (size_t j = 0; j < m_max_values; ++j) {
             vval.push_back(val);
         }
+        m_output = vval;
 
         TDateTime              timestamp = Now();
         std::vector<TDateTime> vts;
@@ -64,13 +67,149 @@ public:
         for (size_t i = 0; i < max_graphs; ++i) {
             m_data_raw.push_back(vval);
             m_data_filtered.push_back(vval);
+            m_bActive.push_back(true);
+            m_ActiveCounter.push_back(0);
+            m_bSkipZeroValuesForFiltering.push_back(skip_zero_values_for_filtering);
+            m_filter_length.push_back(filter_length);
+            m_max_value.push_back(cDEFAULT_MAX_RESET_VALUE);
+            m_max_value_raw.push_back(cDEFAULT_MAX_RESET_VALUE);
         }
-
-        m_max_value     = -1e10;
-        m_max_value_raw = -1e10;
     }
 
     virtual ~CStatisticsStorage() {}
+
+
+    void Clear()
+    {
+        TDateTime now = Now();
+        for (size_t i = 0; i < m_current_graph_count; ++i) {
+            for (size_t j = 0; j < m_current_value_count; ++j) {
+                m_data_raw[i][j]      = cINVALID_VALUE;
+                m_data_filtered[i][j] = cINVALID_VALUE;
+            }
+            m_timestamps[i]    = now;
+            m_keys[i]          = L"";
+            m_legend[i]        = L"";
+            m_ActiveCounter[i] = 0;
+            m_bActive[i]       = true;
+            m_max_value[i]     = cDEFAULT_MAX_RESET_VALUE;
+            m_max_value_raw[i] = cDEFAULT_MAX_RESET_VALUE;
+        }
+
+        m_current             = 0;
+        m_current_value_count = 0;
+
+        if (m_bUseValueAndKey) {
+            m_keys.clear();
+            m_legend.clear();
+        }
+    }
+
+    int FindIndexForKey(const std::wstring& key)
+    {
+        for (size_t i = 0; i < m_current_graph_count; ++i) {
+            if (key == m_keys[i]) {
+                return static_cast<int>(i);
+            }
+        }
+        return -1;
+    }
+
+    size_t CopyInternalData(const std::vector<std::vector<double> >& vector, const int index, size_t num_values, double* target)
+    {
+        if (num_values > m_current_value_count) {
+            num_values = m_current_value_count;
+        }
+
+        int start = m_current - num_values + 1;
+        if (start < 0) {
+            memcpy(target, &vector[index][start + m_max_values], sizeof(double) * -start);
+            memcpy(target - start, &vector[index][0], sizeof(double) * (num_values + start));
+        } else {
+            memcpy(target, &vector[index][start], sizeof(double) * num_values);
+        }
+        return num_values;
+    }
+
+    size_t GetLastValuesForIndex(const size_t index, size_t num_values, double* values_out)
+    {
+        if (index >= m_current_graph_count) {
+            return 0;
+        }
+
+        return CopyInternalData(m_data_filtered, index, num_values, values_out);
+    }
+
+    size_t GetLastValuesForIndexAsCopy(const size_t index, size_t num_values, double*& values_out)
+    {
+        if (index >= m_current_graph_count) {
+            return 0;
+        }
+
+        size_t ret = CopyInternalData(m_data_filtered, index, num_values, &m_output[0]);
+        values_out = &m_output[0];
+        return ret;
+    }
+
+    size_t GetLastRawValuesForIndexAsCopy(const size_t index, size_t num_values, double*& values_out)
+    {
+        if (index >= m_current_graph_count) {
+            return 0;
+        }
+
+        size_t ret = CopyInternalData(m_data_raw, index, num_values, &m_output[0]);
+        values_out = &m_output[0];
+        return ret;
+    }
+
+
+    size_t GetLastRawValuesForIndex(const size_t index, size_t num_values, double* values_out)
+    {
+        if (index >= m_current_graph_count) {
+            return 0;
+        }
+
+        return CopyInternalData(m_data_raw, index, num_values, values_out);
+    }
+
+    size_t GetLastValuesForKey(const std::wstring& key, size_t num_values, double* values_out)
+    {
+        int index = FindIndexForKey(key);
+        if (index < 0) {
+            return 0;
+        }
+
+        return CopyInternalData(m_data_filtered, index, num_values, values_out);
+    }
+
+
+    size_t GetLastRawValuesForKey(const std::wstring& key, size_t num_values, double* values_out)
+    {
+        int index = FindIndexForKey(key);
+        if (index < 0) {
+            return 0;
+        }
+
+        return CopyInternalData(m_data_raw, index, num_values, values_out);
+    }
+
+
+    size_t GetLastTimestamps(size_t num_values, TDateTime* values_out)
+    {
+        if (num_values > m_current_value_count) {
+            num_values = m_current_value_count;
+        }
+
+        int start = m_current - num_values + 1;
+        if (start < 0) {
+            memcpy(values_out, &m_timestamps[start + m_max_values], sizeof(TDateTime) * -start);
+            memcpy(values_out - start, &m_timestamps[0], sizeof(TDateTime) * (num_values + start));
+        } else {
+            memcpy(values_out, &m_timestamps[start], sizeof(TDateTime) * num_values);
+        }
+        return num_values;
+    }
+
 
     size_t GetSize() const { return m_current_value_count; }
 
@@ -79,14 +218,24 @@ public:
     size_t GetMaxGraphs() const { return m_max_graphs; }
 
 
-    void SetActive(bool active)
+    void SetActive(size_t index, bool active)
     {
-        m_bActive = active;
+        if (index >= m_current_graph_count) {
+            return;
+        }
+
+        m_bActive[index] = active;
         if (active)
-            m_ActiveCounter = 0;
+            m_ActiveCounter[index] = 0;
     }
 
-    void SetSkipZeroValuesForFiltering(bool val = true) { m_bSkipZeroValuesForFiltering = val; }
+    void SetSkipZeroValuesForFiltering(size_t index, bool val = true)
+    {
+        if (index >= m_current_graph_count) {
+            return;
+        }
+        m_bSkipZeroValuesForFiltering[index] = val;
+    }
 
 
     // adds a vector of values and applies the timestamp 'Now()'
@@ -107,11 +256,11 @@ public:
             m_current = (m_current + 1) % m_max_values;
         }
 
-        for (size_t i = 0; i < m_current_graph_count; ++i) {
-            if (values[i] > m_max_value_raw) {
-                m_max_value_raw = values[i];
+        for (size_t graph_index = 0; graph_index < m_current_graph_count; ++graph_index) {
+            if (values[graph_index] > m_max_value_raw[graph_index]) {
+                m_max_value_raw[graph_index] = values[graph_index];
             }
-            m_data_raw[i][m_current] = values[i];
+            m_data_raw[graph_index][m_current] = values[graph_index];
         }
         m_timestamps[m_current] = Now();
 
@@ -206,8 +355,8 @@ public:
             for (size_t j = 0; j < m_keys.size(); ++j) {
                 if (keys[i] == m_keys[j]) {
                     // yes, found at position j -> insert value, key, legend
-                    if (values[i] > m_max_value_raw) {
-                        m_max_value_raw = values[i];
+                    if (values[i] > m_max_value_raw[i]) {
+                        m_max_value_raw[i] = values[i];
                     }
                     m_data_raw[j][m_current] = values[i];
                     m_keys[j]                = keys[i];
@@ -219,8 +368,8 @@ public:
 
             if (!bFound && m_keys.size() < m_max_graphs) {
                 // key with value keys[i] not found -> append to statistics if current_keys < m_max_graphs
-                if (values[i] > m_max_value_raw) {
-                    m_max_value_raw = values[i];
+                if (values[i] > m_max_value_raw[i]) {
+                    m_max_value_raw[i] = values[i];
                 }
                 m_data_raw[m_keys.size()][m_current] = values[i];
                 m_keys.push_back(keys[i]);
@@ -268,9 +417,21 @@ public:
         return L"";
     }
 
-    double GetMaxValue() const { return m_max_value; }
+    double GetMaxValue(size_t index) const
+    {
+        if (index >= m_current_graph_count) {
+            return cDEFAULT_MAX_RESET_VALUE;
+        }
+        return m_max_value[index];
+    }
 
-    double GetMaxValueRaw() const { return m_max_value_raw; }
+    double GetMaxValueRaw(size_t index) const
+    {
+        if (index >= m_current_graph_count) {
+            return cDEFAULT_MAX_RESET_VALUE;
+        }
+        return m_max_value_raw[index];
+    }
 
 
     std::vector<double> GetValuesForKey(const std::wstring& key) const
@@ -299,17 +460,37 @@ public:
         return std::vector<TDateTime>(m_timestamps);
     }
 
+
+    void UpdateFilterLengthAll(size_t filter_length)
+    {
+        for (size_t i = 0; i < m_current_graph_count; ++i) {
+            m_filter_length[i] = filter_length;
+        }
+        RefilterAll();
+    }
+
+    void UpdateFilterLengthByIndex(size_t index, size_t filter_length)
+    {
+        if (index >= m_current_graph_count) {
+            return;
+        }
+
+        m_filter_length[index] = filter_length;
+
+        RefilterAll(); //todo: refilter only one graph
+    }
+
 private:
     void UpdateMaximumValues()
     {
-        m_max_value = m_max_value_raw = -1e10;
-        for (size_t i = 0; i < m_current_graph_count; ++i) {
-            for (size_t j = 0; j < m_current_value_count; ++j) {
-                if (m_data_raw[i][j] > m_max_value_raw) {
-                    m_max_value_raw = m_data_raw[i][j];
+        for (size_t graph_index = 0; graph_index < m_current_graph_count; ++graph_index) {
+            m_max_value[graph_index] = m_max_value_raw[graph_index] = cDEFAULT_MAX_RESET_VALUE;
+            for (size_t value_index = 0; value_index < m_current_value_count; ++value_index) {
+                if (m_data_raw[graph_index][value_index] > m_max_value_raw[graph_index]) {
+                    m_max_value_raw[graph_index] = m_data_raw[graph_index][value_index];
                 }
-                if (m_data_filtered[i][j] > m_max_value) {
-                    m_max_value = m_data_filtered[i][j];
+                if (m_data_filtered[graph_index][value_index] > m_max_value[graph_index]) {
+                    m_max_value[graph_index] = m_data_filtered[graph_index][value_index];
                 }
             }
         }
@@ -317,18 +498,26 @@ private:
 
     void AddCurrentRawValuesAsFilteredValues()
     {
-        for (size_t i = 0; i < m_current_graph_count; ++i) {
-            m_data_filtered[i][m_current] = m_data_raw[i][m_current];
-            if (m_data_filtered[i][m_current] > m_max_value) {
-                m_max_value = m_data_filtered[i][m_current];
+        for (size_t graph_index = 0; graph_index < m_current_graph_count; ++graph_index) {
+            m_data_filtered[graph_index][m_current] = m_data_raw[graph_index][m_current];
+            if (m_data_filtered[graph_index][m_current] > m_max_value[graph_index]) {
+                m_max_value[graph_index] = m_data_filtered[graph_index][m_current];
             }
         }
     }
 
 
+    void AddCurrentRawValueAsFilteredValue(size_t index)
+    {
+        m_data_filtered[index][m_current] = m_data_raw[index][m_current];
+        if (m_data_filtered[index][m_current] > m_max_value[index]) {
+            m_max_value[index] = m_data_filtered[index][m_current];
+        }
+    }
+
     // removes m_data_raw, m_data_filtered, m_keys and m_legend at given index
     // index has to exist (not checked here)
-    // may be optimized with memmove/memcopy later on
+    // may be optimized with memmove/memcpy later on
     // but not important, as this functions should rarely be called
     void RemoveFromStatistics(size_t index_to_remove)
     {
@@ -367,45 +556,55 @@ private:
 
     void RefilterAll()
     {
+        for (size_t k = 0; k < m_current_graph_count; ++k) {
+            m_max_value[k] = m_max_value_raw[k] = cDEFAULT_MAX_RESET_VALUE;
+        }
 
-        m_max_value = m_max_value_raw = -1e10;
+        for (size_t value_index = 0; value_index < m_current_value_count; ++value_index) {
 
-        size_t filter_count = (m_current_value_count < m_filter_length) ? m_current_value_count : m_filter_length;
+            for (size_t graph_index = 0; graph_index < m_current_graph_count; ++graph_index) {
 
-        for (size_t index = 0; index < m_current_value_count; ++index) {
-
-
-            // bei gerade aktivierter GPU moeglichst steile 'An-Flanke'
-            // -> Filterung nicht fuer m_nFilterLength sondern nur fuer die Anzahl der Werte nach der Aktivierung durchfuehren
-            // m_bSkipZeroValuesForFiltering muss dafuer true sein
-            if (m_ActiveCounter < filter_count) {
-                filter_count = m_ActiveCounter;
-            }
-
-
-            if (filter_count == 0) {
-                for (size_t i = 0; i < m_current_graph_count; ++i) {
-                    m_data_filtered[i][index] = m_data_raw[i][index];
-                    if (m_data_filtered[i][index] > m_max_value) {
-                        m_max_value = m_data_filtered[i][index];
-                    }
+                if (!m_filter_length[graph_index]) {
+                    AddCurrentRawValueAsFilteredValue(graph_index);
+                    continue;
                 }
-            }
 
-            for (size_t i = 0; i < m_current_graph_count; i++) {
+                // bei deaktivierter GPU moeglichst steile 'Aus-Flanke'
+                // -> keine Filterung
+                if (!m_bActive[graph_index]) {
+                    AddCurrentRawValueAsFilteredValue(graph_index);
+                    continue;
+                }
+
+                ++m_ActiveCounter[graph_index];
+
+                size_t filter_count = (m_current_value_count < m_filter_length[graph_index]) ? m_current_value_count : m_filter_length[graph_index];
+
+                // bei gerade aktivierter GPU moeglichst steile 'An-Flanke'
+                // -> Filterung nicht fuer m_nFilterLength sondern nur fuer die Anzahl der Werte nach der Aktivierung durchfuehren
+                // m_bSkipZeroValuesForFiltering muss dafuer true sein
+                if (m_ActiveCounter[graph_index] < filter_count) {
+                    filter_count = m_ActiveCounter[graph_index];
+                }
+
+                if (filter_count == 0) {
+                    AddCurrentRawValueAsFilteredValue(graph_index);
+                    continue;
+                }
+
                 double fval        = 0;
                 size_t sumCount    = 0;
-                size_t filterIndex = index;
+                size_t filterIndex = value_index;
 
-                for (size_t j = 0; j < filter_count; j++) {
-                    if (!m_bSkipZeroValuesForFiltering) {
-                        if (m_data_raw[i][filterIndex] != cINVALID_VALUE) {
-                            fval += m_data_raw[i][filterIndex];
+                for (size_t filter_index = 0; filter_index < filter_count; ++filter_index) {
+                    if (!m_bSkipZeroValuesForFiltering[graph_index]) {
+                        if (m_data_raw[graph_index][filterIndex] != cINVALID_VALUE) {
+                            fval += m_data_raw[graph_index][filterIndex];
                             sumCount++;
                         }
                     } else {
-                        if ((m_data_raw[i][filterIndex] != 0) && (m_data_raw[i][filterIndex] != cINVALID_VALUE)) {
-                            fval += m_data_raw[i][filterIndex];
+                        if ((m_data_raw[graph_index][filterIndex] != 0) && (m_data_raw[graph_index][filterIndex] != cINVALID_VALUE)) {
+                            fval += m_data_raw[graph_index][filterIndex];
                             sumCount++;
                         }
                     }
@@ -420,11 +619,11 @@ private:
                 } else {
                     fval = cINVALID_VALUE;
                 }
-                m_data_filtered[i][index] = fval;
+                m_data_filtered[graph_index][m_current] = fval;
 
                 // update maximum value
-                if (fval > m_max_value) {
-                    m_max_value = fval;
+                if (fval > m_max_value[graph_index]) {
+                    m_max_value[graph_index] = fval;
                 }
             }
         }
@@ -435,48 +634,49 @@ private:
         if (m_current_value_count < 1)
             return;
 
-        if (!m_filter_length) {
-            AddCurrentRawValuesAsFilteredValues();
-            return;
-        }
+        for (size_t graph_index = 0; graph_index < m_current_graph_count; ++graph_index) {
 
-        // bei deaktivierter GPU moeglichst steile 'Aus-Flanke'
-        // -> keine Filterung
-        if (!m_bActive) {
-            AddCurrentRawValuesAsFilteredValues();
-            return;
-        }
+            if (!m_filter_length[graph_index]) {
+                AddCurrentRawValueAsFilteredValue(graph_index);
+                continue;
+            }
 
-        m_ActiveCounter++;
+            // bei deaktivierter GPU moeglichst steile 'Aus-Flanke'
+            // -> keine Filterung
+            if (!m_bActive[graph_index]) {
+                AddCurrentRawValueAsFilteredValue(graph_index);
+                continue;
+            }
 
-        size_t filter_count = (m_current_value_count < m_filter_length) ? m_current_value_count : m_filter_length;
+            ++m_ActiveCounter[graph_index];
 
-        // bei gerade aktivierter GPU moeglichst steile 'An-Flanke'
-        // -> Filterung nicht fuer m_nFilterLength sondern nur fuer die Anzahl der Werte nach der Aktivierung durchfuehren
-        // m_bSkipZeroValuesForFiltering muss dafuer true sein
-        if (m_ActiveCounter < filter_count) {
-            filter_count = m_ActiveCounter;
-        }
+            size_t filter_count = (m_current_value_count < m_filter_length[graph_index]) ? m_current_value_count : m_filter_length[graph_index];
 
-        if (filter_count == 0) {
-            AddCurrentRawValuesAsFilteredValues();
-            return;
-        }
+            // bei gerade aktivierter GPU moeglichst steile 'An-Flanke'
+            // -> Filterung nicht fuer m_nFilterLength sondern nur fuer die Anzahl der Werte nach der Aktivierung durchfuehren
+            // m_bSkipZeroValuesForFiltering muss dafuer true sein
+            if (m_ActiveCounter[graph_index] < filter_count) {
+                filter_count = m_ActiveCounter[graph_index];
+            }
 
-        for (size_t i = 0; i < m_current_graph_count; i++) {
+            if (filter_count == 0) {
+                AddCurrentRawValueAsFilteredValue(graph_index);
+                continue;
+            }
+
             double fval        = 0;
             size_t sumCount    = 0;
             size_t filterIndex = m_current;
 
-            for (size_t j = 0; j < filter_count; j++) {
-                if (!m_bSkipZeroValuesForFiltering) {
-                    if (m_data_raw[i][filterIndex] != cINVALID_VALUE) {
-                        fval += m_data_raw[i][filterIndex];
+            for (size_t filter_index = 0; filter_index < filter_count; ++filter_index) {
+                if (!m_bSkipZeroValuesForFiltering[graph_index]) {
+                    if (m_data_raw[graph_index][filterIndex] != cINVALID_VALUE) {
+                        fval += m_data_raw[graph_index][filterIndex];
                         sumCount++;
                     }
                 } else {
-                    if ((m_data_raw[i][filterIndex] != 0) && (m_data_raw[i][filterIndex] != cINVALID_VALUE)) {
-                        fval += m_data_raw[i][filterIndex];
+                    if ((m_data_raw[graph_index][filterIndex] != 0) && (m_data_raw[graph_index][filterIndex] != cINVALID_VALUE)) {
+                        fval += m_data_raw[graph_index][filterIndex];
                         sumCount++;
                     }
                 }
@@ -491,21 +691,26 @@ private:
             } else {
                 fval = cINVALID_VALUE;
             }
-            m_data_filtered[i][m_current] = fval;
+            m_data_filtered[graph_index][m_current] = fval;
 
             // update maximum value
-            if (fval > m_max_value) {
-                m_max_value = fval;
+            if (fval > m_max_value[graph_index]) {
+                m_max_value[graph_index] = fval;
             }
         }
     }
 
 
 private:
-    static std::chrono::system_clock::time_point Now()
+#ifndef __BCPLUSPLUS__
+    static TDateTime Now()
     {
-        return std::chrono::system_clock::now();
+        static TDateTime now = -1;
+        now += 1;
+        return now;
+        //        return std::chrono::system_clock::now();
     }
+#endif
 
     std::vector<std::vector<double> > m_data_raw;
     std::vector<std::vector<double> > m_data_filtered;
@@ -513,21 +718,30 @@ private:
     std::vector<std::wstring>         m_keys;
     std::vector<std::wstring>         m_legend;
 
+    std::vector<double> m_output; // vector with copy of internal data to be handed out
+
+    std::vector<bool>   m_bActive;
+    std::vector<size_t> m_ActiveCounter;
+    std::vector<bool>   m_bSkipZeroValuesForFiltering;
+    std::vector<size_t> m_filter_length; // filter length (set to 0 to disable filtering)
+
+    std::vector<double> m_max_value;
+    std::vector<double> m_max_value_raw;
+
     size_t m_current;             // pointer to current (most recently added) element
     size_t m_current_graph_count; // number of 'parallel' graphs
     size_t m_current_value_count; // number of current values in statistic
     size_t m_max_values;          // maximum number of values (reserved)
     size_t m_max_graphs;          // maximum number of 'parallel' graphs (reserved)
-    size_t m_filter_length;       // filter length (if 0 -> filtering is disabled
-    bool   m_bActive;
-    size_t m_ActiveCounter;
-    bool   m_bSkipZeroValuesForFiltering;
-    bool   m_bUseValueAndKey; // state if statistics should use values and keys to determine indices or just indices
-
-    double m_max_value;
-    double m_max_value_raw;
+    bool   m_bUseValueAndKey;     // state if statistics should use values and keys to determine indices or just indices
 };
 
+
+#ifndef __BCPLUSPLUS__
 const double CStatisticsStorage::cINVALID_VALUE = -1.23e40d;
+#else
+const double CStatisticsStorage::cINVALID_VALUE = -1.23e40;
+#endif
+
 
 #endif // STATISTICSSTORAGE_H
