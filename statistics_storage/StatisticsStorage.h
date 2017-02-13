@@ -132,7 +132,7 @@ public:
         return num_values;
     }
 
-    size_t CopyInternalData(const std::vector<TDateTime>& vector, size_t num_values, double* target)
+    size_t CopyInternalData(const std::vector<TDateTime>& vector, size_t num_values, double* target) const
     {
         if (num_values > m_current_value_count) {
             num_values = m_current_value_count;
@@ -150,10 +150,6 @@ public:
 
     size_t GetLastTimestamps(size_t num_values, double* values_out) const
     {
-        if (index >= m_current_graph_count) {
-            return 0;
-        }
-
         return CopyInternalData(m_timestamps, num_values, values_out);
     }
 
