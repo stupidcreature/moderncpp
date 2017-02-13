@@ -148,7 +148,7 @@ public:
         return num_values;
     }
 
-    size_t GetLastTimestamps(const size_t index, size_t num_values, double* values_out)
+    size_t GetLastTimestamps(size_t num_values, double* values_out) const
     {
         if (index >= m_current_graph_count) {
             return 0;
