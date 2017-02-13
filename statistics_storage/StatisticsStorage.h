@@ -6,7 +6,7 @@
 #include <stdexcept>
 #include <string>
 #include <vector>
-
+#include <string.h>
 
 static const double cDEFAULT_MAX_RESET_VALUE = -1e10;
 
@@ -132,6 +132,31 @@ public:
         return num_values;
     }
 
+    size_t CopyInternalData(const std::vector<TDateTime>& vector, size_t num_values, double* target)
+    {
+        if (num_values > m_current_value_count) {
+            num_values = m_current_value_count;
+        }
+
+        int start = m_current - num_values + 1;
+        if (start < 0) {
+            memcpy(target, &vector[start + m_max_values], sizeof(double) * -start);
+            memcpy(target - start, &vector[0], sizeof(double) * (num_values + start));
+        } else {
+            memcpy(target, &vector[start], sizeof(double) * num_values);
+        }
+        return num_values;
+    }
+
+    size_t GetLastTimestamps(const size_t index, size_t num_values, double* values_out)
+    {
+        if (index >= m_current_graph_count) {
+            return 0;
+        }
+
+        return CopyInternalData(m_timestamps, num_values, values_out);
+    }
+
     size_t GetLastValuesForIndex(const size_t index, size_t num_values, double* values_out)
     {
         if (index >= m_current_graph_count) {
@@ -217,6 +242,12 @@ public:
     size_t GetMaxValues() const { return m_max_values; }
 
     size_t GetMaxGraphs() const { return m_max_graphs; }
+
+    size_t GetKeyCount() const { return m_keys.size(); }
+
+    void ResetMaxValues() {
+        RefilterAll();
+    }
 
 
     void SetActive(size_t index, bool active)
