@@ -14,6 +14,20 @@
 // check: https://www.youtube.com/watch?v=nXaxk27zwlk (minute 42)
 
 //prevents the compiler from optimizing away the variable pointed to by b
+static void escape(void*p) {
+    asm volatile("" : : "g"(p) : "memory");
+}
+
+// tells the compiler that the assembly might read/write all data
+// prevents the compiler from optimizing away unused variables
+static void clobber() {
+    asm volatile("" : : : "memory");
+}
+
+
+// ------------------------------------------------------------------------------------------------------------------
+
+//prevents the compiler from optimizing away the variable pointed to by b
 static void escape(void *p) {
     asm volatile("" : : "g"(p) : "memory");
 }
