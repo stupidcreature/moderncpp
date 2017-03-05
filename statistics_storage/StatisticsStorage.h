@@ -16,6 +16,7 @@ public:
 #ifndef __BCPLUSPLUS__
     typedef time_t TDateTime;
 #endif
+    typedef std::string StringDataType_T;
     //typedef std::chrono::system_clock::time_point TDateTime;
 
     //    typedef struct {
@@ -106,7 +107,37 @@ public:
         }
     }
 
-    int FindIndexForKey(const std::wstring& key)
+
+    size_t DuplicateLastValues()
+    {
+        // if there are no values present there is nothing to duplicate
+        if(!m_current_value_count) {
+            return 0;
+        }
+
+        size_t value_index_to_duplicate = m_current_value_count;
+
+        //determine the position where to insert new value
+        if (m_current_value_count) {
+            m_current = (m_current + 1) % m_max_values;
+        }
+
+        for (size_t graph_index = 0; graph_index < m_current_graph_count; ++graph_index) {
+            m_data_raw[graph_index][m_current] = m_data_raw[graph_index][value_index_to_duplicate];
+        }
+        m_timestamps[m_current] = Now();
+
+        if (m_current_value_count < m_max_values) {
+            ++m_current_value_count;
+        }
+
+        PerformFiltering();
+
+        return m_current_value_count;
+    }
+
+
+    int FindIndexForKey(const StringDataType_T& key)
     {
         for (size_t i = 0; i < m_current_graph_count; ++i) {
             if (key == m_keys[i]) {
@@ -194,7 +225,7 @@ public:
         return CopyInternalData(m_data_raw, index, num_values, values_out);
     }
 
-    size_t GetLastValuesForKey(const std::wstring& key, size_t num_values, double* values_out)
+    size_t GetLastValuesForKey(const StringDataType_T& key, size_t num_values, double* values_out)
     {
         int index = FindIndexForKey(key);
         if (index < 0) {
@@ -205,7 +236,7 @@ public:
     }
 
 
-    size_t GetLastRawValuesForKey(const std::wstring& key, size_t num_values, double* values_out)
+    size_t GetLastRawValuesForKey(const StringDataType_T& key, size_t num_values, double* values_out)
     {
         int index = FindIndexForKey(key);
         if (index < 0) {
@@ -324,7 +355,7 @@ public:
     //     adjust m_current_graph_count
     //
     // clang-format on
-    size_t AddValuesWithKeys(std::vector<double> values, std::vector<std::wstring> keys, std::vector<std::wstring> legend)
+    size_t AddValuesWithKeys(std::vector<double> values, std::vector<StringDataType_T> keys, std::vector<StringDataType_T> legend)
     {
         if (!m_bUseValueAndKey) {
             throw(std::runtime_error("AddValuesWithKeys: statistics not intended for use with keys -> set current_graphs to 0 when calling ctor."));
@@ -422,27 +453,27 @@ public:
         return m_current_value_count;
     }
 
-    std::vector<std::wstring> GetLegendVector() const
+    std::vector<StringDataType_T> GetLegendVector() const
     {
         if (m_bUseValueAndKey)
             return m_legend;
 
-        return std::vector<std::wstring>(1, L"NO LEGEND VALUES");
+        return std::vector<StringDataType_T>(1, "NO LEGEND VALUES");
     }
 
-    std::vector<std::wstring> GetKeyVector() const
+    std::vector<StringDataType_T> GetKeyVector() const
     {
         if (m_bUseValueAndKey)
             return m_keys;
 
-        return std::vector<std::wstring>(1, L"NO KEYS");
+        return std::vector<StringDataType_T>(1, "NO KEYS");
     }
 
-    std::wstring GetKeyForIndex(size_t index) const
+    StringDataType_T GetKeyForIndex(size_t index) const
     {
         if (m_bUseValueAndKey && (index < m_current_graph_count))
             return m_keys[index];
-        return L"";
+        return "";
     }
 
     double GetMaxValue(size_t index) const
@@ -462,7 +493,7 @@ public:
     }
 
 
-    std::vector<double> GetValuesForKey(const std::wstring& key) const
+    std::vector<double> GetValuesForKey(const StringDataType_T& key) const
     {
         for (size_t i = 0; i < m_current_graph_count; ++i) {
             if (key == m_keys[i]) {
@@ -473,7 +504,7 @@ public:
     }
 
 
-    std::vector<double> GetRawValuesForKey(const std::wstring& key) const
+    std::vector<double> GetRawValuesForKey(const StringDataType_T& key) const
     {
         for (size_t i = 0; i < m_current_graph_count; ++i) {
             if (key == m_keys[i]) {
@@ -743,8 +774,8 @@ private:
     std::vector<std::vector<double> > m_data_raw;
     std::vector<std::vector<double> > m_data_filtered;
     std::vector<TDateTime>            m_timestamps;
-    std::vector<std::wstring>         m_keys;
-    std::vector<std::wstring>         m_legend;
+    std::vector<StringDataType_T>         m_keys;
+    std::vector<StringDataType_T>         m_legend;
 
     std::vector<double> m_output;       // vector with copy of internal data to be handed out
     std::vector<double> m_output_raw;   // vector with copy of internal raw data to be handed out
