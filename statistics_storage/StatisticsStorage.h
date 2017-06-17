@@ -370,6 +370,14 @@ public:
             throw(std::runtime_error("AddValuesWithKeys: values, keys and legend have to have the same length"));
         }
 
+        // first, assert that the given keys are unique
+        std::set<StringDataType_T> unique_check_set;
+        for (size_t j = 0; j < keys.size(); ++j) {
+          if(unique_check_set.find(keys[j]) != unique_check_set.end() ) {
+            throw(std::runtime_error("AddValuesWithKeys: keys have to be unique"));
+          }
+          unique_check_set.insert(keys[j]);
+        }
 
         bool bToRemove            = true;
         bool bUpdateMaximumValues = false;
