@@ -584,8 +584,10 @@ private:
             return;
         }
 
-
-        for (size_t i = index_to_remove; i < m_current_graph_count - 2; ++i) {
+        // only relevant for more than one graph (would otherwise lead to
+        // stack overflow because of underflow of (m_current_graph_count - 2)
+        if( m_current_graph_count > 1 ) {
+          for (size_t i = index_to_remove; i <= m_current_graph_count - 2; ++i) {
             for (size_t j = 0; j < m_current_value_count; ++j) {
                 m_data_raw[i][j]      = m_data_raw[i + 1][j];
                 m_data_filtered[i][j] = m_data_filtered[i + 1][j];
